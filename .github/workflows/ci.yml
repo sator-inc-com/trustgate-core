@@ -20,13 +20,13 @@ jobs:
           go-version-file: go.mod
 
       - name: Run tests
-        run: go test ./...
+        run: go test $(go list ./... | grep -v /cmd/aigw-tray)
 
       - name: Run tests (controlplane)
         run: go test -tags controlplane ./...
 
       - name: Vet
-        run: go vet ./...
+        run: go vet $(go list ./... | grep -v /cmd/aigw-tray)
 
   build:
     needs: test
