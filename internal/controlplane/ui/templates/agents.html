@@ -1,0 +1,75 @@
+{{define "content"}}
+<h1 style="font-size: 24px; margin-bottom: 20px;">Agents</h1>
+
+<div class="card">
+    <h2>Registered Agents ({{len .Agents}})</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Hostname</th>
+                <th>Department</th>
+                <th>Agent ID</th>
+                <th>OS</th>
+                <th>Version</th>
+                <th>Detectors</th>
+                <th>Policy Version</th>
+                <th>Last Heartbeat</th>
+                <th>Registered</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Agents}}
+            <tr id="agent-row-{{.AgentID}}">
+                <td>
+                    {{if eq .Status "active"}}
+                    <span class="badge badge-green">Active</span>
+                    {{else if eq .Status "stale"}}
+                    <span class="badge badge-yellow">Stale</span>
+                    {{else if eq .Status "offline"}}
+                    <span class="badge badge-red">Offline</span>
+                    {{else}}
+                    <span class="badge badge-gray">Unknown</span>
+                    {{end}}
+                </td>
+                <td>{{.Hostname}}</td>
+                <td>{{if .DepartmentName}}{{.DepartmentName}}{{else}}<span style="color: #aaa;">-</span>{{end}}</td>
+                <td style="font-family: monospace; font-size: 12px;">{{.AgentID}}</td>
+                <td>{{.OS}}</td>
+                <td>{{.Version}}</td>
+                <td>{{.Detectors}}</td>
+                <td>{{.PolicyVersion}}</td>
+                <td>{{.LastHeartbeat.Format "2006-01-02 15:04:05"}}</td>
+                <td>{{.RegisteredAt.Format "2006-01-02 15:04:05"}}</td>
+                <td>
+                    <button onclick="deleteAgent('{{.AgentID}}', '{{.Hostname}}')"
+                            style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="10" style="text-align: center; color: #888; padding: 40px;">
+                    No agents registered yet. Use the API to register an agent.
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function deleteAgent(agentId, hostname) {
+    if (!confirm('Delete agent "' + hostname + '" (' + agentId + ')?\n\nThe agent will need to re-register to reconnect.')) return;
+    const resp = await fetch('/ui/api/agents/' + agentId, { method: 'DELETE' });
+    if (resp.ok) {
+        location.reload();
+    } else {
+        const data = await resp.json();
+        alert('Error: ' + (data.error || 'unknown'));
+    }
+}
+</script>
+{{end}}

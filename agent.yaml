@@ -1,0 +1,47 @@
+version: "1"
+mode: managed
+
+sync:
+  server_url: http://localhost:9090
+  api_key: "tg_dept_business_f8e4924ce5b2efa6ea6f9da8eb550497"
+  labels:
+    environment: "production"
+  heartbeat_sec: 30
+  stats_push_sec: 60
+
+listen:
+  host: 127.0.0.1
+  port: 8787
+
+detectors:
+  pii:
+    enabled: true
+  injection:
+    enabled: true
+    language: [en, ja]
+  confidential:
+    enabled: true
+    keywords:
+      critical: ["\u6975\u79d8", "\u793e\u5916\u79d8", "CONFIDENTIAL", "TOP SECRET"]
+      high: ["\u6a5f\u5bc6", "\u5185\u90e8\u9650\u5b9a", "INTERNAL ONLY"]
+
+policy:
+  source: local
+  file: policies.yaml
+
+audit:
+  mode: local
+  path: audit.db
+  retention_days: 90
+  max_size_mb: 500
+
+content_inspection:
+  enabled: true
+  max_file_size: 10485760
+  max_queue: 4
+  image_keywords: ["機密", "社外秘", "confidential", "secret", "internal"]
+  max_image_size: 52428800
+
+logging:
+  level: debug
+  format: text

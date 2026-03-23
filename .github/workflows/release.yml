@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+          - goos: linux
+            goarch: arm64
+            suffix: linux-arm64
+          - goos: windows
+            goarch: amd64
+            suffix: windows-amd64
+            ext: .exe
+          - goos: darwin
+            goarch: amd64
+            suffix: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            suffix: darwin-arm64
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # Generate Windows resource files (icon, version info, manifest)
+      - name: Install go-winres
+        if: matrix.goos == 'windows'
+        run: go install github.com/tc-hib/go-winres@latest
+
+      - name: Generate Windows resources
+        if: matrix.goos == 'windows'
+        run: |
+          cd cmd/aigw && go-winres make && cd ../..
+          cd cmd/aigw-tray && go-winres make && cd ../..
+
+      - name: Build Agent
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          mkdir -p dist
+          TAGS=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            TAGS="-tags nollm"
+          fi
+          go build $TAGS \
+            -ldflags "-X main.version=${{ github.ref_name }}" \
+            -o dist/aigw-${{ matrix.suffix }}${{ matrix.ext }} \
+            ./cmd/aigw
+
+      - name: Build Tray Manager (Windows)
+        if: matrix.goos == 'windows'
+        env:
+          GOOS: windows
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          go build -tags nollm \
+            -ldflags "-H windowsgui -X main.version=${{ github.ref_name }}" \
+            -o dist/aigw-tray-${{ matrix.suffix }}.exe \
+            ./cmd/aigw-tray
+
+      - name: Build Tray Manager (macOS)
+        if: matrix.goos == 'darwin'
+        env:
+          GOOS: darwin
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          go build \
+            -ldflags "-X main.version=${{ github.ref_name }}" \
+            -o dist/aigw-tray-${{ matrix.suffix }} \
+            ./cmd/aigw-tray
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aigw-${{ matrix.suffix }}
+          path: dist/
+
+  windows-installer:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: aigw-windows-amd64
+          path: build-artifacts/
+
+      # Place binaries where installer.iss expects them: dist/windows/
+      - name: Prepare installer layout
+        shell: bash
+        run: |
+          mkdir -p dist/windows
+          cp build-artifacts/aigw-windows-amd64.exe dist/windows/aigw.exe
+          cp build-artifacts/aigw-tray-windows-amd64.exe dist/windows/aigw-tray.exe
+
+      - name: Create Inno Setup installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.4
+        with:
+          path: scripts/installer.iss
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trustgate-installer
+          path: scripts/Output/TrustGate-Setup-*.exe
+
+  release:
+    needs: [build, windows-installer]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/aigw-*/aigw-*
+            artifacts/trustgate-installer/TrustGate-Setup-*.exe
+          generate_release_notes: true

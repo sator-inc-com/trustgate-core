@@ -1,0 +1,42 @@
+version: "1"
+mode: standalone
+
+listen:
+  host: 127.0.0.1
+  port: 8787
+  allow_debug: true
+
+detectors:
+  pii:
+    enabled: true
+    patterns:
+      email: true
+      phone: true
+      mobile: true
+      my_number: true
+      credit_card: true
+  injection:
+    enabled: true
+    language: [en, ja]
+  confidential:
+    enabled: true
+    keywords:
+      critical: ["極秘", "社外秘", "CONFIDENTIAL", "TOP SECRET"]
+      high: ["機密", "内部限定", "INTERNAL ONLY"]
+
+policy:
+  source: local
+  file: policies.yaml
+
+audit:
+  mode: memory
+  max_entries: 100
+
+logging:
+  level: info
+  format: text
+
+backend:
+  provider: mock
+  mock:
+    delay_ms: 50

@@ -1,0 +1,176 @@
+{{define "content"}}
+<h1 style="font-size: 24px; margin-bottom: 20px;">Reports</h1>
+
+<!-- CSV Export Downloads -->
+<div class="card" style="margin-bottom: 20px;">
+    <h2>Export Data (CSV)</h2>
+    <p style="color: #666; font-size: 14px; margin-bottom: 16px;">Download reports as CSV files for offline analysis or compliance documentation.</p>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">Audit Log</div>
+            <div style="font-size: 12px; color: #888; margin-bottom: 12px;">Daily inspection stats by agent, action, detector</div>
+            <select id="audit-period" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;">
+                <option value="7d">Last 7 days</option>
+                <option value="30d" selected>Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+            </select>
+            <a id="audit-csv-link" href="/ui/reports/audit.csv?period=30d" style="display: inline-block; padding: 8px 16px; background: #1565c0; color: #fff; border-radius: 4px; text-decoration: none; font-size: 13px;">Download audit.csv</a>
+        </div>
+        <div style="flex: 1; min-width: 200px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">Summary</div>
+            <div style="font-size: 12px; color: #888; margin-bottom: 12px;">Aggregated counts by department, action, detector</div>
+            <select id="summary-period" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;">
+                <option value="7d">Last 7 days</option>
+                <option value="30d" selected>Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+            </select>
+            <a id="summary-csv-link" href="/ui/reports/summary.csv?period=30d" style="display: inline-block; padding: 8px 16px; background: #1565c0; color: #fff; border-radius: 4px; text-decoration: none; font-size: 13px;">Download summary.csv</a>
+        </div>
+        <div style="flex: 1; min-width: 200px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">Agent List</div>
+            <div style="font-size: 12px; color: #888; margin-bottom: 12px;">All registered agents with status and metadata</div>
+            <div style="height: 36px;"></div>
+            <a href="/ui/reports/agents.csv" style="display: inline-block; padding: 8px 16px; background: #1565c0; color: #fff; border-radius: 4px; text-decoration: none; font-size: 13px;">Download agents.csv</a>
+        </div>
+        <div style="flex: 1; min-width: 200px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px;">
+            <div style="font-weight: 600; margin-bottom: 4px;">High Risk Users</div>
+            <div style="font-size: 12px; color: #888; margin-bottom: 12px;">Users ranked by violation count and risk score</div>
+            <select id="risk-period" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px;">
+                <option value="7d">Last 7 days</option>
+                <option value="30d" selected>Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+            </select>
+            <a id="risk-csv-link" href="/ui/reports/risk-users.csv?period=30d" style="display: inline-block; padding: 8px 16px; background: #c62828; color: #fff; border-radius: 4px; text-decoration: none; font-size: 13px;">Download risk-users.csv</a>
+        </div>
+    </div>
+    <script>
+    (function() {
+        function updateLink(selectId, linkId, base) {
+            var sel = document.getElementById(selectId);
+            var link = document.getElementById(linkId);
+            if (sel && link) {
+                sel.addEventListener('change', function() {
+                    link.href = base + '?period=' + sel.value;
+                });
+            }
+        }
+        updateLink('audit-period', 'audit-csv-link', '/ui/reports/audit.csv');
+        updateLink('summary-period', 'summary-csv-link', '/ui/reports/summary.csv');
+        updateLink('risk-period', 'risk-csv-link', '/ui/reports/risk-users.csv');
+    })();
+    </script>
+</div>
+
+<!-- Section 1: KPI Summary Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-value">{{.KPI.TotalRequests}}</div>
+        <div class="kpi-label">Total Inspections ({{.Days}}d)</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" style="color: #c62828;">{{printf "%.1f" .KPI.BlockRate}}%</div>
+        <div class="kpi-label">Block Rate</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value">{{.KPI.ActiveAgents}}</div>
+        <div class="kpi-label">Active Agents</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" style="color: #f57f17;">{{.ViolationsToday}}</div>
+        <div class="kpi-label">Policy Violations Today</div>
+    </div>
+</div>
+
+<!-- Section 2: Daily Activity Chart (CSS-only, last 7 days) -->
+<div class="card">
+    <h2>Daily Activity (Last 7 Days)</h2>
+    {{if .DayBars}}
+    <div style="margin-top: 12px;">
+        <div style="display: flex; gap: 8px; margin-bottom: 12px; font-size: 12px; color: #666;">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#66bb6a;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Allow</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#ffa726;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Warn</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#ef5350;border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Block</span>
+        </div>
+        {{range .DayBars}}
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <div style="width: 90px; font-size: 12px; color: #666; flex-shrink: 0;">{{.Date}}</div>
+            <div style="flex: 1; display: flex; height: 24px; background: #f5f5f5; border-radius: 4px; overflow: hidden;">
+                {{if gt .AllowCount 0}}
+                <div style="width: {{if gt $.MaxTotal 0}}{{pct .AllowCount $.MaxTotal}}{{else}}0{{end}}%; background: #66bb6a; min-width: 2px;" title="Allow: {{.AllowCount}}"></div>
+                {{end}}
+                {{if gt .WarnCount 0}}
+                <div style="width: {{if gt $.MaxTotal 0}}{{pct .WarnCount $.MaxTotal}}{{else}}0{{end}}%; background: #ffa726; min-width: 2px;" title="Warn: {{.WarnCount}}"></div>
+                {{end}}
+                {{if gt .BlockCount 0}}
+                <div style="width: {{if gt $.MaxTotal 0}}{{pct .BlockCount $.MaxTotal}}{{else}}0{{end}}%; background: #ef5350; min-width: 2px;" title="Block: {{.BlockCount}}"></div>
+                {{end}}
+            </div>
+            <div style="width: 50px; text-align: right; font-size: 12px; color: #888; flex-shrink: 0; margin-left: 8px;">{{.Total}}</div>
+        </div>
+        {{end}}
+    </div>
+    {{else}}
+    <p style="text-align: center; color: #888; padding: 40px 0;">No activity data yet. Connect agents to start collecting stats.</p>
+    {{end}}
+</div>
+
+<!-- Section 3: Top Violations Table -->
+<div class="card">
+    <h2>Top Policy Violations ({{.Days}}d)</h2>
+    {{if .TopViolations}}
+    <table>
+        <thead>
+            <tr>
+                <th>Policy Name</th>
+                <th>Trigger Count</th>
+                <th>False Positives</th>
+                <th>Last Triggered</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .TopViolations}}
+            <tr>
+                <td><span class="badge badge-red">{{.PolicyName}}</span></td>
+                <td>{{.TriggerCount}}</td>
+                <td>{{.FPCount}}</td>
+                <td>{{.LastTriggered}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p style="text-align: center; color: #888; padding: 40px 0;">No policy violations recorded yet.</p>
+    {{end}}
+</div>
+
+<!-- Section 4: Agent Activity -->
+<div class="card">
+    <h2>Agent Activity ({{.Days}}d)</h2>
+    {{if .AgentActivity}}
+    <table>
+        <thead>
+            <tr>
+                <th>Agent ID</th>
+                <th>Total Inspections</th>
+                <th>Blocked</th>
+                <th>Warned</th>
+                <th>Allowed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .AgentActivity}}
+            <tr>
+                <td style="font-family: monospace; font-size: 13px;">{{.AgentID}}</td>
+                <td>{{.TotalCount}}</td>
+                <td>{{if gt .BlockCount 0}}<span class="badge badge-red">{{.BlockCount}}</span>{{else}}0{{end}}</td>
+                <td>{{if gt .WarnCount 0}}<span class="badge badge-yellow">{{.WarnCount}}</span>{{else}}0{{end}}</td>
+                <td><span class="badge badge-green">{{.AllowCount}}</span></td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <p style="text-align: center; color: #888; padding: 40px 0;">No agent activity recorded yet.</p>
+    {{end}}
+</div>
+{{end}}

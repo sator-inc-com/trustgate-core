@@ -1,0 +1,89 @@
+version: "1"
+
+policies:
+  - name: block_injection_critical
+    phase: input
+    when:
+      detector: injection
+      min_severity: critical
+    action: block
+    message: "Prompt injection detected. This attempt has been logged."
+    whitelist:
+      identity:
+        role: [admin, security]
+
+  - name: warn_injection_high
+    phase: input
+    when:
+      detector: injection
+      min_severity: high
+    action: warn
+    whitelist:
+      identity:
+        role: [admin, security]
+
+  - name: block_injection_output_critical
+    phase: output
+    when:
+      detector: injection
+      min_severity: critical
+    action: block
+    message: "Malicious instructions detected in AI response."
+    whitelist:
+      identity:
+        role: [admin, security]
+
+  - name: warn_injection_output_high
+    phase: output
+    when:
+      detector: injection
+      min_severity: high
+    action: warn
+    whitelist:
+      identity:
+        role: [admin, security]
+
+  - name: block_pii_input
+    phase: input
+    when:
+      detector: pii
+      min_severity: high
+    action: block
+    message: "Personal information detected. Please remove PII before sending."
+    whitelist:
+      identity:
+        role: [admin, security]
+
+  - name: warn_pii_output
+    phase: output
+    when:
+      detector: pii
+      min_severity: high
+    action: warn
+    whitelist:
+      identity:
+        role: [admin, security]
+
+  - name: block_confidential_input
+    phase: input
+    when:
+      detector: confidential
+      min_severity: critical
+    action: block
+    mode: shadow
+    message: "Confidential information detected."
+    whitelist:
+      identity:
+        role: [admin, security]
+
+  - name: block_confidential_output
+    phase: output
+    when:
+      detector: confidential
+      min_severity: critical
+    action: block
+    mode: shadow
+    message: "Confidential information detected in AI response."
+    whitelist:
+      identity:
+        role: [admin, security]

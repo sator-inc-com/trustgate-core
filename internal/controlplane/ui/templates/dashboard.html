@@ -1,0 +1,215 @@
+{{define "content"}}
+<h1 style="font-size: 24px; margin-bottom: 20px;">Dashboard</h1>
+
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-value">{{.KPI.TotalRequests}}</div>
+        <div class="kpi-label">Total Requests ({{.Days}}d)</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" style="color: #c62828;">{{.KPI.BlockCount}}</div>
+        <div class="kpi-label">Blocked</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" style="color: #f57f17;">{{.KPI.WarnCount}}</div>
+        <div class="kpi-label">Warned</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" style="color: #2e7d32;">{{.KPI.AllowCount}}</div>
+        <div class="kpi-label">Allowed</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value">{{printf "%.1f" .KPI.BlockRate}}%</div>
+        <div class="kpi-label">Block Rate</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value">{{.KPI.ActiveAgents}}/{{.KPI.TotalAgents}}</div>
+        <div class="kpi-label">Active Agents</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value">{{printf "%.1f" .KPI.FPRate}}%</div>
+        <div class="kpi-label">False Positive Rate</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-value" style="font-size: 18px;">{{.KPI.TopDetector}}</div>
+        <div class="kpi-label">Top Detector</div>
+    </div>
+</div>
+
+{{if .ApiKey}}
+<div class="card" style="background:#f5f5f5;border:1px solid #e0e0e0;margin-bottom:24px;">
+    <h2 style="margin-bottom:16px;">Agent Setup</h2>
+
+    <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;color:#666;margin-bottom:4px;">1. 部署を選択</label>
+        <select id="deptSelector" onchange="updateAgentSetup()" style="padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;min-width:260px;">
+            <option value="" disabled selected>-- 部署を選択してください --</option>
+        </select>
+    </div>
+
+    <div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:600;color:#333;margin-bottom:12px;">2. インストーラーに入力する値</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:8px 0;color:#666;width:140px;">Mode</td>
+                <td style="padding:8px 0;font-weight:600;">Managed</td>
+                <td style="padding:8px 0;text-align:right;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:8px 0;color:#666;">Server URL</td>
+                <td style="padding:8px 0;"><code id="displayServerUrl" style="background:#e3f2fd;padding:2px 8px;border-radius:3px;font-size:12px;">{{.ServerURL}}</code></td>
+                <td style="padding:8px 0;text-align:right;"><button onclick="copyText('{{.ServerURL}}',this)" style="padding:3px 8px;background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;border-radius:3px;cursor:pointer;font-size:11px;">Copy</button></td>
+            </tr>
+            <tr>
+                <td style="padding:8px 0;color:#666;">API Key</td>
+                <td style="padding:8px 0;"><code id="displayApiKey" style="background:#fff3e0;padding:2px 8px;border-radius:3px;font-size:12px;word-break:break-all;">{{.ApiKey}}</code></td>
+                <td style="padding:8px 0;text-align:right;"><button id="copyKeyBtn" onclick="copyText(document.getElementById('displayApiKey').textContent,this)" style="padding:3px 8px;background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;border-radius:3px;cursor:pointer;font-size:11px;">Copy</button></td>
+            </tr>
+        </table>
+    </div>
+
+    <details style="margin-bottom:12px;">
+        <summary style="cursor:pointer;font-size:13px;color:#1976d2;font-weight:600;">サイレントインストール（コマンドライン）</summary>
+        <div style="position:relative;margin-top:8px;">
+            <button onclick="navigator.clipboard.writeText(document.getElementById('installerCmd').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='Copy',2000)" style="position:absolute;top:6px;right:8px;padding:4px 10px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:11px;z-index:1;">Copy</button>
+            <pre id="installerCmd" style="background:#263238;color:#e0e0e0;padding:12px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0;">TrustGate-Setup.exe /SILENT /SERVERURL="{{.ServerURL}}" /APIKEY="{{.ApiKey}}"</pre>
+        </div>
+    </details>
+
+    <details>
+        <summary style="cursor:pointer;font-size:13px;color:#1976d2;font-weight:600;">agent.yaml（手動設定用）</summary>
+        <div style="position:relative;margin-top:8px;">
+            <button onclick="navigator.clipboard.writeText(document.getElementById('agentYaml').textContent);this.textContent='Copied';setTimeout(()=>this.textContent='Copy',2000)" style="position:absolute;top:8px;right:8px;padding:6px 12px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;z-index:1;">Copy</button>
+            <pre id="agentYaml" style="background:#263238;color:#e0e0e0;padding:16px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0;"></pre>
+        </div>
+    </details>
+</div>
+
+<script>
+(function() {
+    var serverURL = '{{.ServerURL}}';
+    var orgApiKey = '{{.ApiKey}}';
+    var departments = [];
+
+    function generateYaml(apiKey, deptId) {
+        var deptLine = deptId ? ('    department: "' + deptId + '"') : '    department: "dev"  # set your department ID';
+        return 'version: "1"\n' +
+            'mode: managed\n\n' +
+            'sync:\n' +
+            '  server_url: ' + serverURL + '\n' +
+            '  api_key: "' + apiKey + '"\n' +
+            '  labels:\n' +
+            deptLine + '\n' +
+            '    environment: "production"\n' +
+            '  heartbeat_sec: 30\n' +
+            '  stats_push_sec: 60\n\n' +
+            'listen:\n' +
+            '  host: 127.0.0.1\n' +
+            '  port: 8787\n\n' +
+            'detectors:\n' +
+            '  pii:\n' +
+            '    enabled: true\n' +
+            '  injection:\n' +
+            '    enabled: true\n' +
+            '    language: [en, ja]\n' +
+            '  confidential:\n' +
+            '    enabled: true\n' +
+            '    keywords:\n' +
+            '      critical: ["\u6975\u79d8", "\u793e\u5916\u79d8", "CONFIDENTIAL", "TOP SECRET"]\n' +
+            '      high: ["\u6a5f\u5bc6", "\u5185\u90e8\u9650\u5b9a", "INTERNAL ONLY"]\n\n' +
+            'policy:\n' +
+            '  source: local\n' +
+            '  file: ./policies.yaml\n\n' +
+            'audit:\n' +
+            '  mode: local\n' +
+            '  path: ./audit.db\n\n' +
+            'logging:\n' +
+            '  level: info\n' +
+            '  format: text';
+    }
+
+    // Load departments
+    fetch('/ui/api/departments')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            departments = data || [];
+            var sel = document.getElementById('deptSelector');
+            departments.forEach(function(d) {
+                var opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name + ' (' + d.id + ')';
+                opt.dataset.apiKey = d.api_key || '';
+                sel.appendChild(opt);
+            });
+            updateAgentSetup();
+        })
+        .catch(function() { updateAgentSetup(); });
+
+    window.copyText = function(text, btn) {
+        navigator.clipboard.writeText(text);
+        var orig = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(function() { btn.textContent = orig; }, 2000);
+    };
+
+    window.updateAgentSetup = function() {
+        var sel = document.getElementById('deptSelector');
+        var selectedOpt = sel.options[sel.selectedIndex];
+        var apiKey = orgApiKey;
+        var deptId = '';
+
+        if (sel.value && selectedOpt.dataset.apiKey) {
+            apiKey = selectedOpt.dataset.apiKey;
+            deptId = sel.value;
+        }
+
+        document.getElementById('displayApiKey').textContent = apiKey;
+        document.getElementById('agentYaml').textContent = generateYaml(apiKey, deptId);
+        document.getElementById('installerCmd').textContent =
+            'TrustGate-Setup.exe /SILENT /SERVERURL="' + serverURL + '" /APIKEY="' + apiKey + '"';
+    };
+})();
+</script>
+{{end}}
+
+<div class="card">
+    <h2>Daily Actions ({{.Days}} days)</h2>
+    <div class="chart-container">
+        <canvas id="dailyChart"></canvas>
+    </div>
+</div>
+
+<script>
+(function() {
+    const rawData = JSON.parse('{{.DailyJSON}}');
+    if (!rawData || rawData.length === 0) {
+        document.getElementById('dailyChart').parentElement.innerHTML = '<p style="text-align:center;color:#888;padding:40px;">No data yet. Connect agents to start collecting stats.</p>';
+        return;
+    }
+
+    const dates = [...new Set(rawData.map(d => d.date))].sort();
+    const actions = [...new Set(rawData.map(d => d.action))];
+    const colorMap = { block: '#ef5350', warn: '#ffa726', allow: '#66bb6a', mask: '#42a5f5' };
+
+    const datasets = actions.map(action => ({
+        label: action.charAt(0).toUpperCase() + action.slice(1),
+        data: dates.map(date => {
+            const item = rawData.find(d => d.date === date && d.action === action);
+            return item ? item.count : 0;
+        }),
+        backgroundColor: colorMap[action] || '#90a4ae',
+    }));
+
+    new Chart(document.getElementById('dailyChart'), {
+        type: 'bar',
+        data: { labels: dates, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+            plugins: { legend: { position: 'top' } }
+        }
+    });
+})();
+</script>
+{{end}}

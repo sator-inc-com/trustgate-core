@@ -1,0 +1,42 @@
+{
+  "RT_GROUP_ICON": {
+    "#1": {
+      "0000": "../../../scripts/setup-icon.ico"
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": {
+        "identity": {
+          "name": "TrustGate.Agent",
+          "version": "0.1.0.0"
+        },
+        "description": "TrustGate Agent - AI Zero Trust Gateway",
+        "minimum-os": "win10",
+        "dpi-awareness": "system"
+      }
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0000": {
+        "fixed": {
+          "file_version": "0.1.0.0",
+          "product_version": "0.1.0.0"
+        },
+        "info": {
+          "0409": {
+            "CompanyName": "TrustGate",
+            "FileDescription": "TrustGate Agent",
+            "FileVersion": "0.1.0",
+            "InternalName": "aigw",
+            "LegalCopyright": "Copyright (c) 2026 TrustGate",
+            "OriginalFilename": "aigw.exe",
+            "ProductName": "TrustGate",
+            "ProductVersion": "0.1.0"
+          }
+        }
+      }
+    }
+  }
+}

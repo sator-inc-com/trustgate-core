@@ -1,0 +1,40 @@
+# Binaries (root level only)
+/aigw
+/aigw.exe
+/aigw-server
+/aigw-server.exe
+/aigw-inspector
+/aigw-inspector.exe
+
+# Database
+*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+*.test
+coverage.out
+
+# Build
+dist/
+
+# Extension (managed in trustgate-extension repo)
+extension/
+
+# Database temp files
+*.db-shm
+*.db-wal
+
+# Audit data
+audit_data/
+
+# Tray binary
+/aigw-tray
+/aigw-tray.exe

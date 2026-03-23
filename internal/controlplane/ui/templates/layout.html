@@ -1,0 +1,59 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustGate{{if .Title}} - {{.Title}}{{end}}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .nav { background: #1a1a2e; color: #fff; padding: 0 24px; display: flex; align-items: center; height: 56px; }
+        .nav-brand { font-size: 18px; font-weight: 700; margin-right: 32px; }
+        .nav-links a { color: #ccc; text-decoration: none; margin-right: 20px; font-size: 14px; padding: 8px 0; }
+        .nav-links a:hover, .nav-links a.active { color: #fff; border-bottom: 2px solid #4fc3f7; }
+        .container { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h2 { font-size: 16px; color: #666; margin-bottom: 12px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .kpi-value { font-size: 32px; font-weight: 700; color: #1a1a2e; }
+        .kpi-label { font-size: 13px; color: #888; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { color: #888; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .badge-green { background: #e8f5e9; color: #2e7d32; }
+        .badge-red { background: #ffebee; color: #c62828; }
+        .badge-yellow { background: #fff8e1; color: #f57f17; }
+        .badge-gray { background: #f5f5f5; color: #757575; }
+        .chart-container { position: relative; height: 300px; }
+        .btn { display: inline-block; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-primary:hover { background: #1557b0; }
+        pre { background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 13px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand">TrustGate</div>
+        <div class="nav-links">
+            <a href="/ui/" {{if eq .Page "dashboard"}}class="active"{{end}}>Dashboard</a>
+            <a href="/ui/agents" {{if eq .Page "agents"}}class="active"{{end}}>Agents</a>
+            <a href="/ui/departments" {{if eq .Page "departments"}}class="active"{{end}}>Departments</a>
+            <a href="/ui/policies" {{if eq .Page "policies"}}class="active"{{end}}>Policies</a>
+            <a href="/ui/reports" {{if eq .Page "reports"}}class="active"{{end}}>Reports</a>
+            <a href="/ui/admins" {{if eq .Page "admins"}}class="active"{{end}}>Admins</a>
+        </div>
+        <div style="margin-left: auto;">
+            <a href="/ui/logout" style="color: #ccc; text-decoration: none; font-size: 14px;">Logout</a>
+        </div>
+    </nav>
+    <div class="container">
+        {{template "content" .}}
+    </div>
+</body>
+</html>
+{{end}}

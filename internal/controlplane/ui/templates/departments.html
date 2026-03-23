@@ -1,0 +1,204 @@
+{{define "content"}}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 style="font-size: 24px;">Departments</h1>
+    <button class="btn btn-primary" onclick="showAddForm()">Add Department</button>
+</div>
+
+<!-- Add/Edit Form (hidden by default) -->
+<div id="dept-form" class="card" style="display: none; margin-bottom: 16px;">
+    <h2 id="form-title">Add Department</h2>
+    <form id="dept-form-el" onsubmit="saveDepartment(event)" style="margin-top: 12px;">
+        <input type="hidden" id="form-mode" value="add">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; align-items: end;">
+            <div>
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">ID</label>
+                <input type="text" id="dept-id" placeholder="e.g., sales" required
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
+                    pattern="[a-z0-9][a-z0-9_-]{0,62}" title="Lowercase alphanumeric, hyphens, underscores">
+            </div>
+            <div>
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">Name</label>
+                <input type="text" id="dept-name" placeholder="e.g., Sales" required
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">Description</label>
+                <input type="text" id="dept-desc" placeholder="Optional description"
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn" style="background: #eee; color: #333;" onclick="hideForm()">Cancel</button>
+        </div>
+        <div id="form-error" style="color: #c62828; font-size: 13px; margin-top: 8px; display: none;"></div>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Department Master ({{len .Departments}})</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>API Key</th>
+                <th>Agents</th>
+                <th>Created</th>
+                <th style="width: 120px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="dept-table-body">
+            {{range .Departments}}
+            <tr id="row-{{.ID}}">
+                <td style="font-family: monospace; font-size: 13px;">{{.ID}}</td>
+                <td>{{.Name}}</td>
+                <td style="color: #666;">{{.Description}}</td>
+                <td style="font-family: monospace; font-size: 12px;">
+                    {{if .ApiKey}}
+                    <span id="key-masked-{{.ID}}" style="color: #888;">{{slice .ApiKey 0 12}}...</span>
+                    <span id="key-full-{{.ID}}" style="display:none;">{{.ApiKey}}</span>
+                    <button class="btn" style="padding: 2px 6px; font-size: 11px; background: #e8eaf6; color: #3949ab; margin-left: 4px;"
+                        onclick="toggleKey('{{.ID}}')" id="key-toggle-{{.ID}}">Show</button>
+                    <button class="btn" style="padding: 2px 6px; font-size: 11px; background: #e8f5e9; color: #2e7d32; margin-left: 2px;"
+                        onclick="copyKey('{{.ID}}', '{{.ApiKey}}')">Copy</button>
+                    {{else}}
+                    <span style="color: #aaa;">-</span>
+                    {{end}}
+                </td>
+                <td>
+                    {{if gt .AgentCount 0}}
+                    <span class="badge badge-green">{{.AgentCount}}</span>
+                    {{else}}
+                    <span style="color: #aaa;">0</span>
+                    {{end}}
+                </td>
+                <td>{{.CreatedAt.Format "2006-01-02"}}</td>
+                <td>
+                    <button class="btn" style="padding: 4px 10px; font-size: 12px; background: #e3f2fd; color: #1565c0;"
+                        onclick="editDepartment('{{.ID}}', '{{.Name}}', '{{.Description}}')">Edit</button>
+                    {{if eq .AgentCount 0}}
+                    <button class="btn" style="padding: 4px 10px; font-size: 12px; background: #ffebee; color: #c62828;"
+                        onclick="deleteDepartment('{{.ID}}', '{{.Name}}')">Delete</button>
+                    {{end}}
+                </td>
+            </tr>
+            {{else}}
+            <tr id="empty-row">
+                <td colspan="7" style="text-align: center; color: #888; padding: 40px;">
+                    No departments configured. Click "Add Department" to create one.
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleKey(id) {
+    var masked = document.getElementById('key-masked-' + id);
+    var full = document.getElementById('key-full-' + id);
+    var btn = document.getElementById('key-toggle-' + id);
+    if (full.style.display === 'none') {
+        full.style.display = 'inline';
+        masked.style.display = 'none';
+        btn.textContent = 'Hide';
+    } else {
+        full.style.display = 'none';
+        masked.style.display = 'inline';
+        btn.textContent = 'Show';
+    }
+}
+
+function copyKey(id, key) {
+    navigator.clipboard.writeText(key);
+    var btn = event.target;
+    btn.textContent = 'Copied';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+}
+
+function showAddForm() {
+    document.getElementById('form-mode').value = 'add';
+    document.getElementById('form-title').textContent = 'Add Department';
+    document.getElementById('dept-id').value = '';
+    document.getElementById('dept-id').disabled = false;
+    document.getElementById('dept-name').value = '';
+    document.getElementById('dept-desc').value = '';
+    document.getElementById('form-error').style.display = 'none';
+    document.getElementById('dept-form').style.display = 'block';
+    document.getElementById('dept-id').focus();
+}
+
+function editDepartment(id, name, desc) {
+    document.getElementById('form-mode').value = 'edit';
+    document.getElementById('form-title').textContent = 'Edit Department: ' + id;
+    document.getElementById('dept-id').value = id;
+    document.getElementById('dept-id').disabled = true;
+    document.getElementById('dept-name').value = name;
+    document.getElementById('dept-desc').value = desc;
+    document.getElementById('form-error').style.display = 'none';
+    document.getElementById('dept-form').style.display = 'block';
+    document.getElementById('dept-name').focus();
+}
+
+function hideForm() {
+    document.getElementById('dept-form').style.display = 'none';
+}
+
+function showError(msg) {
+    var el = document.getElementById('form-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+async function saveDepartment(e) {
+    e.preventDefault();
+    var mode = document.getElementById('form-mode').value;
+    var id = document.getElementById('dept-id').value.trim();
+    var name = document.getElementById('dept-name').value.trim();
+    var desc = document.getElementById('dept-desc').value.trim();
+
+    var url, method;
+    if (mode === 'add') {
+        url = '/ui/api/departments';
+        method = 'POST';
+    } else {
+        url = '/ui/api/departments/' + encodeURIComponent(id);
+        method = 'PUT';
+    }
+
+    try {
+        var resp = await fetch(url, {
+            method: method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({id: id, name: name, description: desc})
+        });
+        if (!resp.ok) {
+            var data = await resp.json();
+            showError(data.error || 'Failed to save department');
+            return;
+        }
+        window.location.reload();
+    } catch (err) {
+        showError('Network error: ' + err.message);
+    }
+}
+
+async function deleteDepartment(id, name) {
+    if (!confirm('Delete department "' + name + '" (' + id + ')?')) return;
+
+    try {
+        var resp = await fetch('/ui/api/departments/' + encodeURIComponent(id), {method: 'DELETE'});
+        if (!resp.ok) {
+            var data = await resp.json();
+            alert(data.error || 'Failed to delete department');
+            return;
+        }
+        window.location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+</script>
+{{end}}

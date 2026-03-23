@@ -1,0 +1,367 @@
+{{define "content"}}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h1 style="font-size: 24px;">Admin Accounts</h1>
+    <button class="btn btn-primary" onclick="showAddForm()">Add Admin</button>
+</div>
+
+<!-- Add Form (hidden by default) -->
+<div id="admin-form" class="card" style="display: none; margin-bottom: 16px;">
+    <h2>Add Admin</h2>
+    <form id="admin-form-el" onsubmit="saveAdmin(event)" style="margin-top: 12px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end;">
+            <div>
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">Username</label>
+                <input type="text" id="admin-username" placeholder="e.g., john" required
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
+                    pattern="[a-zA-Z0-9][a-zA-Z0-9._-]{0,62}" title="Alphanumeric, dots, hyphens, underscores">
+            </div>
+            <div>
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">Display Name</label>
+                <input type="text" id="admin-display" placeholder="e.g., John Smith" required
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div>
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">Password (min 8 chars)</label>
+                <input type="password" id="admin-password" placeholder="Password" required minlength="8"
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <button type="submit" class="btn btn-primary">Create</button>
+            <button type="button" class="btn" style="background: #eee; color: #333;" onclick="hideForm()">Cancel</button>
+        </div>
+        <div id="form-error" style="color: #c62828; font-size: 13px; margin-top: 8px; display: none;"></div>
+    </form>
+</div>
+
+<!-- Change Password Modal (hidden) -->
+<div id="pw-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 400px; max-width: 90vw;">
+        <h2 id="pw-title">Change Password</h2>
+        <form onsubmit="submitPasswordChange(event)" style="margin-top: 12px;">
+            <input type="hidden" id="pw-username">
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">New Password (min 8 chars)</label>
+                <input type="password" id="pw-new" placeholder="New password" required minlength="8"
+                    style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary">Update</button>
+                <button type="button" class="btn" style="background: #eee; color: #333;" onclick="hidePwModal()">Cancel</button>
+            </div>
+            <div id="pw-error" style="color: #c62828; font-size: 13px; margin-top: 8px; display: none;"></div>
+        </form>
+    </div>
+</div>
+
+<!-- Token Created Modal (hidden) -->
+<div id="token-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="card" style="width: 560px; max-width: 90vw;">
+        <h2>API Token Created</h2>
+        <p style="color: #c62828; font-size: 13px; margin: 8px 0;">Copy this token now. It will not be shown again.</p>
+        <div style="background: #f5f5f5; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; margin: 12px 0;" id="token-value"></div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" onclick="copyToken()">Copy to Clipboard</button>
+            <button class="btn" style="background: #eee; color: #333;" onclick="hideTokenModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Admin Users ({{len .Admins}})</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Display Name</th>
+                <th>MFA</th>
+                <th>Created</th>
+                <th>Last Login</th>
+                <th style="width: 200px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Admins}}
+            <tr>
+                <td style="font-family: monospace; font-size: 13px;">
+                    {{.ID}}
+                    {{if eq $.CurrentUser .ID}}<span class="badge badge-green" style="margin-left: 4px;">you</span>{{end}}
+                </td>
+                <td>{{.DisplayName}}</td>
+                <td>
+                    {{if .MFAEnabled}}
+                    <span class="badge badge-green">Enabled</span>
+                    {{else}}
+                    <span class="badge badge-gray">Disabled</span>
+                    {{end}}
+                </td>
+                <td>{{.CreatedAt.Format "2006-01-02"}}</td>
+                <td>
+                    {{if .LastLogin}}
+                    {{.LastLogin.Format "2006-01-02 15:04"}}
+                    {{else}}
+                    <span style="color: #aaa;">Never</span>
+                    {{end}}
+                </td>
+                <td>
+                    <button class="btn" style="padding: 4px 10px; font-size: 12px; background: #e3f2fd; color: #1565c0;"
+                        onclick="showPwModal('{{.ID}}')">Change Password</button>
+                    {{if ne $.CurrentUser .ID}}
+                    <button class="btn" style="padding: 4px 10px; font-size: 12px; background: #ffebee; color: #c62828;"
+                        onclick="deleteAdmin('{{.ID}}', '{{.DisplayName}}')">Delete</button>
+                    {{end}}
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="6" style="text-align: center; color: #888; padding: 40px;">
+                    No admin accounts configured.
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<div class="card" style="margin-top: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2>API Tokens ({{len .Tokens}})</h2>
+        <button class="btn btn-primary" onclick="showTokenForm()">Generate Token</button>
+    </div>
+    <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        API tokens authenticate programmatic access to the admin API (e.g., CI/CD, scripts).
+        Use <code>Authorization: Bearer tg_admin_...</code> header.
+    </p>
+
+    <!-- Generate Token Form (hidden) -->
+    <div id="token-form" style="display: none; margin-bottom: 16px; padding: 12px; background: #f9f9f9; border-radius: 8px;">
+        <form onsubmit="generateToken(event)">
+            <div style="display: flex; gap: 12px; align-items: end;">
+                <div style="flex: 1;">
+                    <label style="display: block; font-size: 13px; color: #666; margin-bottom: 4px;">Token Name</label>
+                    <input type="text" id="token-name" placeholder="e.g., CI/CD pipeline" required
+                        style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                </div>
+                <button type="submit" class="btn btn-primary">Generate</button>
+                <button type="button" class="btn" style="background: #eee; color: #333;" onclick="hideTokenForm()">Cancel</button>
+            </div>
+            <div id="token-form-error" style="color: #c62828; font-size: 13px; margin-top: 8px; display: none;"></div>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Owner</th>
+                <th>Created</th>
+                <th>Last Used</th>
+                <th>Token Hash (prefix)</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Tokens}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td style="font-family: monospace; font-size: 13px;">{{.Username}}</td>
+                <td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                <td>
+                    {{if .LastUsed}}
+                    {{.LastUsed.Format "2006-01-02 15:04"}}
+                    {{else}}
+                    <span style="color: #aaa;">Never</span>
+                    {{end}}
+                </td>
+                <td style="font-family: monospace; font-size: 12px; color: #888;">{{printf "%.12s" .TokenHash}}...</td>
+                <td>
+                    <button class="btn" style="padding: 4px 10px; font-size: 12px; background: #ffebee; color: #c62828;"
+                        onclick="revokeToken('{{.TokenHash}}', '{{.Name}}')">Revoke</button>
+                </td>
+            </tr>
+            {{else}}
+            <tr>
+                <td colspan="6" style="text-align: center; color: #888; padding: 40px;">
+                    No API tokens created. Generate a token to access the admin API programmatically.
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function showAddForm() {
+    document.getElementById('admin-username').value = '';
+    document.getElementById('admin-display').value = '';
+    document.getElementById('admin-password').value = '';
+    document.getElementById('form-error').style.display = 'none';
+    document.getElementById('admin-form').style.display = 'block';
+    document.getElementById('admin-username').focus();
+}
+
+function hideForm() {
+    document.getElementById('admin-form').style.display = 'none';
+}
+
+function showError(id, msg) {
+    var el = document.getElementById(id);
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+async function saveAdmin(e) {
+    e.preventDefault();
+    var username = document.getElementById('admin-username').value.trim();
+    var displayName = document.getElementById('admin-display').value.trim();
+    var password = document.getElementById('admin-password').value;
+
+    try {
+        var resp = await fetch('/ui/api/admins', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: username, display_name: displayName, password: password})
+        });
+        if (!resp.ok) {
+            var data = await resp.json();
+            showError('form-error', data.error || 'Failed to create admin');
+            return;
+        }
+        window.location.reload();
+    } catch (err) {
+        showError('form-error', 'Network error: ' + err.message);
+    }
+}
+
+async function deleteAdmin(id, name) {
+    if (!confirm('Delete admin "' + name + '" (' + id + ')?')) return;
+
+    try {
+        var resp = await fetch('/ui/api/admins/' + encodeURIComponent(id), {method: 'DELETE'});
+        if (!resp.ok) {
+            var data = await resp.json();
+            alert(data.error || 'Failed to delete admin');
+            return;
+        }
+        window.location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+
+function showPwModal(username) {
+    document.getElementById('pw-username').value = username;
+    document.getElementById('pw-title').textContent = 'Change Password: ' + username;
+    document.getElementById('pw-new').value = '';
+    document.getElementById('pw-error').style.display = 'none';
+    document.getElementById('pw-modal').style.display = 'flex';
+    document.getElementById('pw-new').focus();
+}
+
+function hidePwModal() {
+    document.getElementById('pw-modal').style.display = 'none';
+}
+
+async function submitPasswordChange(e) {
+    e.preventDefault();
+    var username = document.getElementById('pw-username').value;
+    var password = document.getElementById('pw-new').value;
+
+    try {
+        var resp = await fetch('/ui/api/admins/' + encodeURIComponent(username) + '/password', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: password})
+        });
+        if (!resp.ok) {
+            var data = await resp.json();
+            showError('pw-error', data.error || 'Failed to update password');
+            return;
+        }
+        hidePwModal();
+        alert('Password updated successfully.');
+    } catch (err) {
+        showError('pw-error', 'Network error: ' + err.message);
+    }
+}
+
+/* --- API Token Management --- */
+var lastGeneratedToken = '';
+
+function showTokenForm() {
+    document.getElementById('token-name').value = '';
+    document.getElementById('token-form-error').style.display = 'none';
+    document.getElementById('token-form').style.display = 'block';
+    document.getElementById('token-name').focus();
+}
+
+function hideTokenForm() {
+    document.getElementById('token-form').style.display = 'none';
+}
+
+async function generateToken(e) {
+    e.preventDefault();
+    var name = document.getElementById('token-name').value.trim();
+    if (!name) return;
+
+    try {
+        var resp = await fetch('/ui/api/tokens', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name})
+        });
+        if (!resp.ok) {
+            var data = await resp.json();
+            showError('token-form-error', data.error || 'Failed to generate token');
+            return;
+        }
+        var data = await resp.json();
+        lastGeneratedToken = data.token;
+        document.getElementById('token-value').textContent = data.token;
+        hideTokenForm();
+        document.getElementById('token-modal').style.display = 'flex';
+    } catch (err) {
+        showError('token-form-error', 'Network error: ' + err.message);
+    }
+}
+
+function copyToken() {
+    if (navigator.clipboard && lastGeneratedToken) {
+        navigator.clipboard.writeText(lastGeneratedToken).then(function() {
+            alert('Token copied to clipboard.');
+        });
+    } else {
+        // Fallback
+        var el = document.getElementById('token-value');
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        alert('Token copied to clipboard.');
+    }
+}
+
+function hideTokenModal() {
+    document.getElementById('token-modal').style.display = 'none';
+    lastGeneratedToken = '';
+    window.location.reload();
+}
+
+async function revokeToken(hash, name) {
+    if (!confirm('Revoke API token "' + name + '"? This cannot be undone.')) return;
+
+    try {
+        var resp = await fetch('/ui/api/tokens/' + encodeURIComponent(hash), {method: 'DELETE'});
+        if (!resp.ok) {
+            var data = await resp.json();
+            alert(data.error || 'Failed to revoke token');
+            return;
+        }
+        window.location.reload();
+    } catch (err) {
+        alert('Network error: ' + err.message);
+    }
+}
+</script>
+{{end}}

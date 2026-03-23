@@ -1,0 +1,12 @@
+version: "1"
+listen:
+  host: 0.0.0.0
+  port: 9090
+database:
+  path: ./controlplane.db
+auth:
+  api_key: "tg_org_changeme_generate_a_real_key"
+  mfa_required: false
+logging:
+  level: info
+  format: text
