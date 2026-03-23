@@ -23,7 +23,7 @@ jobs:
         run: go test $(go list ./... | grep -v /cmd/aigw-tray)
 
       - name: Run tests (controlplane)
-        run: go test -tags controlplane ./...
+        run: go test -tags controlplane $(go list ./... | grep -v /cmd/aigw-tray)
 
       - name: Vet
         run: go vet $(go list ./... | grep -v /cmd/aigw-tray)
