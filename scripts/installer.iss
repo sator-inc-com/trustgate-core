@@ -55,8 +55,8 @@ Source: "..\dist\windows\aigw-tray.exe"; DestDir: "{app}"; DestName: "aigw-tray.
 Source: "default-agent.yaml"; DestDir: "{commonappdata}\TrustGate"; DestName: "agent.yaml"; Flags: onlyifdoesntexist confirmoverwrite; Components: config
 Source: "default-policies.yaml"; DestDir: "{commonappdata}\TrustGate"; DestName: "policies.yaml"; Flags: onlyifdoesntexist confirmoverwrite; Components: config
 
-; Browser extension
-Source: "..\extension\*"; DestDir: "{commonappdata}\TrustGate\extension"; Flags: ignoreversion recursesubdirs; Components: extension
+; Browser extension (included when extension/ directory exists in build)
+Source: "..\extension\*"; DestDir: "{commonappdata}\TrustGate\extension"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist; Components: extension
 
 ; Icon file
 Source: "setup-icon.ico"; DestDir: "{app}"; DestName: "trustgate.ico"; Flags: ignoreversion
