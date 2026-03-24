@@ -174,11 +174,23 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           PKG_FILE=$(ls TrustGate-macOS-*.pkg)
-          xcrun notarytool submit "$PKG_FILE" \
+          # Submit and capture submission ID
+          SUBMIT_OUTPUT=$(xcrun notarytool submit "$PKG_FILE" \
             --apple-id "$APPLE_ID" \
             --password "$APPLE_ID_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
-            --wait
+            --wait 2>&1) || true
+          echo "$SUBMIT_OUTPUT"
+          # Extract submission ID and fetch log on failure
+          SUB_ID=$(echo "$SUBMIT_OUTPUT" | grep "id:" | head -1 | awk '{print $2}')
+          if echo "$SUBMIT_OUTPUT" | grep -q "Invalid"; then
+            echo "=== Notarization Log ==="
+            xcrun notarytool log "$SUB_ID" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_ID_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" || true
+            exit 1
+          fi
           xcrun stapler staple "$PKG_FILE"
 
       - name: Cleanup keychain
