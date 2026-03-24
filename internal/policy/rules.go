@@ -29,7 +29,6 @@ type PolicyCondition struct {
 	Detector    string           `yaml:"detector"`
 	MinSeverity string           `yaml:"min_severity"`
 	Identity    *IdentityMatch   `yaml:"identity,omitempty"`
-	Session     *SessionMatch    `yaml:"session,omitempty"`
 }
 
 type IdentityMatch struct {
@@ -44,10 +43,6 @@ type ClearanceMatch struct {
 type RoleMatch struct {
 	In    []string `yaml:"in,omitempty"`
 	NotIn []string `yaml:"not_in,omitempty"`
-}
-
-type SessionMatch struct {
-	RiskScoreGte float64 `yaml:"risk_score_gte"`
 }
 
 type Whitelist struct {

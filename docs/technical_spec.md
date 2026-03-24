@@ -1126,8 +1126,6 @@ notifications:
       on:
         actions: [block]
         min_severity: critical
-        # セッションリスクスコア閾値超過
-        session_risk_gte: 0.8
       throttle: 15m
 
     # ログファイル出力（SIEM連携用）
@@ -1157,12 +1155,6 @@ notifications:
     "action": "block",
     "reason": "prompt_injection_detected"
   },
-  "session": {
-    "session_id": "sess-123",
-    "risk_score": 0.6,
-    "request_count": 5,
-    "block_count": 2
-  },
   "summary": "ユーザー yamada (sales) のリクエストがプロンプトインジェクション検知によりブロックされました"
 }
 ```
@@ -1180,14 +1172,6 @@ notifications:
       notify: [slack_security, pagerduty]
       severity: critical
       summary: "ユーザー {user_id} が10分間に{count}回ブロックされました"
-
-    # セッションリスクスコアが閾値超過
-    - name: high_risk_session
-      condition:
-        session_risk_gte: 0.8
-      notify: [slack_security]
-      severity: high
-      summary: "セッション {session_id} のリスクスコアが{risk_score}に到達"
 
     # 新しいインジェクションパターンの集中検知
     - name: injection_surge
@@ -1646,12 +1630,6 @@ listen:
           "reason": "pii detected (email, severity=high)",
           "action": "mask"
         },
-        {
-          "policy": "session_risk_block",
-          "phase": "input",
-          "matched": false,
-          "reason": "risk_score 0.2 < threshold 0.8"
-        }
       ],
       "final_action": "mask",
       "processing_time_ms": 3
@@ -1981,20 +1959,6 @@ identity:
   on_missing: anonymous
   anonymous_role: guest
 
-# Context設定
-context:
-  session:
-    ttl: 30m
-    store: memory
-  risk_scoring:
-    injection_detected: 0.4
-    pii_detected: 0.2
-    confidential_detected: 0.3
-    block_occurred: 0.3
-    decay_per_minute: 0.01
-    threshold_warn: 0.5
-    threshold_block: 0.8
-
 # Detector設定
 detectors:
   pii:
@@ -2152,14 +2116,6 @@ policies:
     action: block
     message: "機密情報を含む回答は制限されています。"
 
-  # セッション: 高リスク
-  - name: session_risk_block
-    phase: input
-    when:
-      session:
-        risk_score_gte: 0.8
-    action: block
-    message: "セッションのリスクスコアが閾値を超えました。管理者に連絡してください。"
 ```
 
 ---
@@ -3980,7 +3936,7 @@ Chrome MV3では以下の制約がある:
 
 **Fetchインターセプト:** ブラウザ拡張はwindow.fetchをオーバーライドし、対象4サイト（ChatGPT, Gemini, Claude.ai, Copilot）のAI送信リクエストを送信前にインターセプトする。ポリシー違反時はfetchリクエスト自体を阻止する。
 
-**サイトロックアウト:** BLOCK判定時は30秒間のサイトロックアウトを実施。黒背景でDOM全体を置換し、ロックアウト中はサイトの操作を不可にする。
+**サイトロックアウト:** BLOCK判定時は10秒間のサイトロックアウトを実施。黒背景でDOM全体を置換し、ロックアウト中はサイトの操作を不可にする。ロックアウト秒数はAgent設定(`workforce.lockout_seconds`)で変更可能。
 
 #### Workforceのアクション制約
 
@@ -4120,8 +4076,7 @@ X-TrustGate-Department: sales
   "context": {
     "site": "chatgpt.com",
     "url": "https://chatgpt.com/c/xxx",
-    "action": "submit",
-    "session_id": "browser-sess-456"
+    "action": "submit"
   }
 }
 ```
@@ -4145,17 +4100,14 @@ X-TrustGate-Department: sales
   "masked_text": "山田太郎のメールは ****************** です。これを要約して。",
   "policy": "mask_pii_input",
   "message": null,
-  "session": {
-    "risk_score": 0.2,
-    "request_count": 3
-  }
+  "lockout_seconds": 0
 }
 ```
 
 | `action` | ブラウザ拡張の動作 |
 |---|---|
 | `allow` | そのまま送信を許可 |
-| `block` | 送信を阻止、`message`をユーザーに表示、30秒間サイトロックアウト |
+| `block` | 送信を阻止、`message`をユーザーに表示、10秒間サイトロックアウト（`lockout_seconds`で設定可能） |
 | `warn` | 警告ダイアログを表示、ユーザー確認後に送信可能 |
 
 #### 出力検査
@@ -4168,8 +4120,7 @@ POST /v1/inspect
   "text": "山田太郎の連絡先は yamada@example.com です。電話番号は 090-1234-5678 です。",
   "context": {
     "site": "chatgpt.com",
-    "action": "response",
-    "session_id": "browser-sess-456"
+    "action": "response"
   }
 }
 ```
@@ -4248,7 +4199,7 @@ content.js の動作:
 
   4. 結果に応じた処理:
      allow → 元の送信イベントを再発火
-     block → 30秒間サイトロックアウト（黒背景DOM置換）、送信を阻止
+     block → 10秒間サイトロックアウト（黒背景DOM置換）、送信を阻止
      warn  → 確認ダイアログ、ユーザー承認後に送信
 
 ファイル検査:
@@ -4900,7 +4851,6 @@ detectors:
 - 正規表現マッチのConfidence < 0.8（低信頼度）
 - 言語混在入力（日本語+英語、潜在的な回避テクニック）
 - エンコード/難読化コンテンツ（base64ライクなパターン）
-- 高セッションリスクスコア（≥ 0.5）
 
 ### 31.6 実行環境
 
@@ -4972,8 +4922,7 @@ DetectAll(input string) []Finding
     │
     ├─ 2. エスカレーション判定
     │     ├─ Finding に Confidence < threshold のものがある？
-    │     ├─ 言語混在 / エンコードコンテンツ？
-    │     └─ セッションリスクスコア ≥ 0.5？
+    │     └─ 言語混在 / エンコードコンテンツ？
     │
     ├─ 3. エスカレーション条件を満たす場合
     │     └─ Stage 2 LLM Detector実行

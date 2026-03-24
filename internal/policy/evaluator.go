@@ -12,11 +12,10 @@ import (
 
 // EvalContext holds the context for policy evaluation.
 type EvalContext struct {
-	Phase     string // input | output
-	Identity  identity.Identity
-	Findings  []detector.Finding
-	RiskScore float64
-	AppID     string
+	Phase    string // input | output
+	Identity identity.Identity
+	Findings []detector.Finding
+	AppID    string
 }
 
 // EvalResult represents the result of evaluating all policies.
@@ -131,14 +130,6 @@ func (e *Evaluator) matchPolicy(p Policy, ctx EvalContext) (bool, string) {
 	// Check whitelist first
 	if p.Whitelist != nil && e.isWhitelisted(p.Whitelist, ctx) {
 		return false, "whitelisted"
-	}
-
-	// Session-based conditions
-	if p.When.Session != nil {
-		if ctx.RiskScore >= p.When.Session.RiskScoreGte {
-			return true, formatReason("risk_score %.2f >= threshold %.2f", ctx.RiskScore, p.When.Session.RiskScoreGte)
-		}
-		return false, formatReason("risk_score %.2f < threshold %.2f", ctx.RiskScore, p.When.Session.RiskScoreGte)
 	}
 
 	// Identity-based conditions

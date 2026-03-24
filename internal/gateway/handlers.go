@@ -23,10 +23,9 @@ type InspectRequest struct {
 }
 
 type InspectContext struct {
-	Site      string `json:"site,omitempty"`
-	URL       string `json:"url,omitempty"`
-	Action    string `json:"action,omitempty"` // submit | response
-	SessionID string `json:"session_id,omitempty"`
+	Site   string `json:"site,omitempty"`
+	URL    string `json:"url,omitempty"`
+	Action string `json:"action,omitempty"` // submit | response
 }
 
 // InspectResponse is the response body for POST /v1/inspect.
@@ -35,10 +34,10 @@ type InspectResponse struct {
 	AuditID    string              `json:"audit_id"`
 	Detections []MaskedFinding     `json:"detections"`
 	MaskedText string              `json:"masked_text,omitempty"`
-	Policy     string              `json:"policy,omitempty"`
-	Message    string              `json:"message,omitempty"`
-	Session    *SessionInfo        `json:"session,omitempty"`
-	Debug      *DebugInfo          `json:"debug,omitempty"`
+	Policy         string              `json:"policy,omitempty"`
+	Message        string              `json:"message,omitempty"`
+	LockoutSeconds int                 `json:"lockout_seconds,omitempty"`
+	Debug          *DebugInfo          `json:"debug,omitempty"`
 }
 
 type MaskedFinding struct {
@@ -50,14 +49,8 @@ type MaskedFinding struct {
 	Length   int    `json:"length"`
 }
 
-type SessionInfo struct {
-	RiskScore    float64 `json:"risk_score"`
-	RequestCount int     `json:"request_count"`
-}
-
 type DebugInfo struct {
 	Identity         interface{}           `json:"identity"`
-	Session          interface{}           `json:"session,omitempty"`
 	InputDetections  []MaskedFinding       `json:"input_detections"`
 	PolicyEvaluation []policy.PolicyTraceItem `json:"policy_evaluation"`
 	FinalAction      string                `json:"final_action"`
@@ -164,6 +157,15 @@ func (s *Server) handleInspect(w http.ResponseWriter, r *http.Request) {
 		resp.MaskedText = enforcement.MaskFindings(req.Text, findings, '*')
 	}
 
+	// Set lockout duration for block actions (browser extension enforces this)
+	if evalResult.Action == "block" {
+		lockout := 10
+		if s.cfg.Workforce.LockoutSeconds > 0 {
+			lockout = s.cfg.Workforce.LockoutSeconds
+		}
+		resp.LockoutSeconds = lockout
+	}
+
 	// Add debug info if requested
 	debugHeader := r.Header.Get("X-TrustGate-Debug")
 	if debugHeader == "true" && s.cfg.Listen.AllowDebug {
@@ -210,14 +212,14 @@ func (s *Server) handleInspect(w http.ResponseWriter, r *http.Request) {
 				Department: id.Department,
 				Clearance:  id.Clearance,
 				AuthMethod: id.AuthMethod,
-				SessionID:  req.Context.SessionID,
+				SessionID:  "",
 				AppID:      req.Context.Site,
 				InputHash:  audit.HashText(req.Text),
 				Action:     evalResult.Action,
 				PolicyName: evalResult.PolicyName,
 				Reason:     evalResult.Reason,
 				Detections: string(detectionsJSON),
-				RiskScore:  evalCtx.RiskScore,
+				RiskScore:  0,
 				DurationMs: elapsed.Milliseconds(),
 				RequestIP:  r.RemoteAddr,
 			}); err != nil {

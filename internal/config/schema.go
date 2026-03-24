@@ -77,8 +77,9 @@ type IdentityConfig struct {
 // WorkforceConfig configures Workforce mode settings.
 // When Enabled, only /v1/inspect is active (no LLM proxy).
 type WorkforceConfig struct {
-	Enabled     bool             `yaml:"enabled"`
-	TargetSites TargetSitesConfig `yaml:"target_sites"`
+	Enabled        bool              `yaml:"enabled"`
+	TargetSites    TargetSitesConfig `yaml:"target_sites"`
+	LockoutSeconds int              `yaml:"lockout_seconds"` // Site lockout duration on BLOCK (default: 10)
 }
 
 // TargetSitesConfig defines which sites the browser extension should monitor.
