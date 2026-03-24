@@ -12,6 +12,7 @@
 set -euo pipefail
 
 VERSION="${1:?Usage: $0 <version> <arch> [binary-dir]}"
+VERSION="${VERSION#v}"  # Strip leading 'v' for dpkg compatibility
 ARCH="${2:?Usage: $0 <version> <arch> [binary-dir]}"
 BINARY_DIR="${3:-dist}"
 
