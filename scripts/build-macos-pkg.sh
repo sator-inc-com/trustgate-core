@@ -38,7 +38,6 @@ echo ""
 # --- Create staging layout ---
 mkdir -p "${PKG_ROOT}/usr/local/bin"
 mkdir -p "${PKG_ROOT}/Library/Application Support/TrustGate"
-mkdir -p "${PKG_ROOT}/Library/LaunchDaemons"
 mkdir -p "${PKG_ROOT}/Library/LaunchAgents"
 mkdir -p "${PKG_SCRIPTS}"
 mkdir -p "${PKG_RESOURCES}"
@@ -90,8 +89,8 @@ fi
 cp "${SCRIPT_DIR}/default-agent.yaml" "${PKG_ROOT}/Library/Application Support/TrustGate/agent.yaml"
 cp "${SCRIPT_DIR}/default-policies.yaml" "${PKG_ROOT}/Library/Application Support/TrustGate/policies.yaml"
 
-# --- Copy launchd plists ---
-cp "${SCRIPT_DIR}/com.trustgate.agent.plist" "${PKG_ROOT}/Library/LaunchDaemons/"
+# --- Copy launchd plists (both as LaunchAgents for user-level control) ---
+cp "${SCRIPT_DIR}/com.trustgate.agent.plist" "${PKG_ROOT}/Library/LaunchAgents/"
 
 if [ -d "${PKG_ROOT}/Applications/TrustGate.app" ]; then
     cp "${SCRIPT_DIR}/com.trustgate.tray.plist" "${PKG_ROOT}/Library/LaunchAgents/"

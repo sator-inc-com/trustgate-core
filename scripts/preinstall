@@ -4,19 +4,31 @@
 
 set -e
 
-AGENT_PLIST="/Library/LaunchDaemons/com.trustgate.agent.plist"
+AGENT_PLIST="/Library/LaunchAgents/com.trustgate.agent.plist"
 TRAY_PLIST="/Library/LaunchAgents/com.trustgate.tray.plist"
+# Also check old LaunchDaemons location (upgrade from older version)
+OLD_AGENT_PLIST="/Library/LaunchDaemons/com.trustgate.agent.plist"
 
-# Stop existing agent service
-if [ -f "$AGENT_PLIST" ]; then
-    echo "Stopping existing TrustGate Agent service..."
-    launchctl unload "$AGENT_PLIST" 2>/dev/null || true
+# Get the console user (preinstall runs as root)
+CONSOLE_USER=$(stat -f "%Su" /dev/console 2>/dev/null || echo "")
+
+# Stop existing agent service (LaunchAgents)
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+    if [ -f "$AGENT_PLIST" ]; then
+        echo "Stopping existing TrustGate Agent service..."
+        sudo -u "$CONSOLE_USER" launchctl unload "$AGENT_PLIST" 2>/dev/null || true
+    fi
+    if [ -f "$TRAY_PLIST" ]; then
+        echo "Stopping existing TrustGate Tray..."
+        sudo -u "$CONSOLE_USER" launchctl unload "$TRAY_PLIST" 2>/dev/null || true
+    fi
 fi
 
-# Stop existing tray app
-if [ -f "$TRAY_PLIST" ]; then
-    echo "Stopping existing TrustGate Tray..."
-    launchctl unload "$TRAY_PLIST" 2>/dev/null || true
+# Clean up old LaunchDaemons if upgrading
+if [ -f "$OLD_AGENT_PLIST" ]; then
+    echo "Removing old LaunchDaemons plist..."
+    launchctl unload "$OLD_AGENT_PLIST" 2>/dev/null || true
+    rm -f "$OLD_AGENT_PLIST"
 fi
 
 # Kill any remaining processes

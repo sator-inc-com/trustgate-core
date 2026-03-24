@@ -80,12 +80,14 @@ func handleClicks() {
 }
 
 func startAgent() {
-	// macOS: use launchctl to manage the agent service
+	// macOS: use launchctl to manage the agent service (LaunchAgents = user level, no sudo)
 	if runtime.GOOS == "darwin" {
-		cmd := exec.Command("launchctl", "load", "/Library/LaunchDaemons/com.trustgate.agent.plist")
+		plist := os.ExpandEnv("/Library/LaunchAgents/com.trustgate.agent.plist")
+		cmd := exec.Command("launchctl", "load", plist)
 		if err := cmd.Run(); err != nil {
 			// Already loaded, try kickstart
-			exec.Command("launchctl", "kickstart", "-k", "system/com.trustgate.agent").Run()
+			uid := fmt.Sprintf("gui/%d/com.trustgate.agent", os.Getuid())
+			exec.Command("launchctl", "kickstart", "-k", uid).Run()
 		}
 		notify("TrustGate", "サービスを開始しました")
 		time.Sleep(2 * time.Second)
@@ -142,9 +144,10 @@ func startAgent() {
 }
 
 func stopAgent() {
-	// macOS: use launchctl to stop the agent service
+	// macOS: use launchctl to stop the agent service (LaunchAgents = user level, no sudo)
 	if runtime.GOOS == "darwin" {
-		exec.Command("launchctl", "unload", "/Library/LaunchDaemons/com.trustgate.agent.plist").Run()
+		plist := "/Library/LaunchAgents/com.trustgate.agent.plist"
+		exec.Command("launchctl", "unload", plist).Run()
 		notify("TrustGate", "サービスを停止しました")
 		time.Sleep(1 * time.Second)
 		checkHealth()

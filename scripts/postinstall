@@ -5,12 +5,13 @@
 set -e
 
 CONFIG_DIR="/Library/Application Support/TrustGate"
-LOG_DIR="/Library/Logs/TrustGate"
+LOG_DIR="$HOME/Library/Logs/TrustGate"
 CONFIG_PATH="${CONFIG_DIR}/agent.yaml"
-AGENT_PLIST="/Library/LaunchDaemons/com.trustgate.agent.plist"
+AGENT_PLIST="/Library/LaunchAgents/com.trustgate.agent.plist"
 TRAY_PLIST="/Library/LaunchAgents/com.trustgate.tray.plist"
 
 # Create directories
+mkdir -p "$CONFIG_DIR"
 mkdir -p "$LOG_DIR"
 chmod 755 "$LOG_DIR"
 
@@ -21,27 +22,22 @@ if [ -f "$AGENT_PLIST" ]; then
     sed -i '' "s|__LOG_DIR__|${LOG_DIR}|g" "$AGENT_PLIST"
 fi
 
-# Load and start agent service
-if [ -f "$AGENT_PLIST" ]; then
-    echo "Starting TrustGate Agent service..."
-    launchctl load "$AGENT_PLIST" 2>/dev/null || true
+# Note: LaunchAgents are loaded per-user at login.
+# We don't load them here because postinstall runs as root.
+# Instead, open the tray app which will handle agent startup.
+if [ -d "/Applications/TrustGate.app" ]; then
+    CONSOLE_USER=$(stat -f "%Su" /dev/console)
+    if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+        # Load agent plist for the console user
+        sudo -u "$CONSOLE_USER" launchctl load "$AGENT_PLIST" 2>/dev/null || true
+        # Load tray plist and open app
+        if [ -f "$TRAY_PLIST" ]; then
+            sudo -u "$CONSOLE_USER" launchctl load "$TRAY_PLIST" 2>/dev/null || true
+        fi
+        sudo -u "$CONSOLE_USER" open /Applications/TrustGate.app 2>/dev/null || true
+    fi
 fi
 
-# Load tray app (if installed as .app bundle)
-if [ -f "$TRAY_PLIST" ] && [ -d "/Applications/TrustGate.app" ]; then
-    echo "Registering TrustGate Tray for auto-launch..."
-    launchctl load "$TRAY_PLIST" 2>/dev/null || true
-    # Launch the app on first install
-    open /Applications/TrustGate.app 2>/dev/null || true
-fi
-
-# Wait briefly and verify
-sleep 2
-if curl -s http://localhost:8787/v1/health > /dev/null 2>&1; then
-    echo "TrustGate Agent is running."
-else
-    echo "Note: Agent may take a few seconds to start. Check with:"
-    echo "  curl -s http://localhost:8787/v1/health | jq ."
-fi
+echo "TrustGate installed. The agent will start automatically at login."
 
 exit 0
