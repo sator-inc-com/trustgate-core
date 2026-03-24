@@ -150,8 +150,34 @@ jobs:
           name: trustgate-installer-macos-${{ matrix.arch }}
           path: TrustGate-Setup-*.pkg
 
+  linux-installer:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            artifact: aigw-linux-amd64
+          - arch: arm64
+            artifact: aigw-linux-arm64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/
+
+      - name: Build .deb package
+        run: bash scripts/build-linux-deb.sh "${{ github.ref_name }}" "${{ matrix.arch }}" dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trustgate-installer-linux-${{ matrix.arch }}
+          path: trustgate_*.deb
+
   release:
-    needs: [build, windows-installer, macos-installer]
+    needs: [build, windows-installer, macos-installer, linux-installer]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -165,6 +191,7 @@ jobs:
             artifacts/aigw-*/aigw-*
             artifacts/trustgate-installer/TrustGate-Setup-*.exe
             artifacts/trustgate-installer-macos-*/TrustGate-Setup-*.pkg
+            artifacts/trustgate-installer-linux-*/trustgate_*.deb
           generate_release_notes: true
           body: |
             ## TrustGate ${{ github.ref_name }}
@@ -180,10 +207,11 @@ jobs:
             | **Windows** | `TrustGate-Setup-*.exe` | Installer (Agent + Tray Manager + browser extension) |
             | **macOS (Apple Silicon)** | `TrustGate-Setup-*-arm64.pkg` | Installer (Agent + Tray Manager) |
             | **macOS (Intel)** | `TrustGate-Setup-*-amd64.pkg` | Installer (Agent only) |
+            | **Linux (x86_64)** | `trustgate_*_amd64.deb` | Debian/Ubuntu package with systemd service |
+            | **Linux (ARM)** | `trustgate_*_arm64.deb` | Debian/Ubuntu package with systemd service |
             | Windows (manual) | `aigw-windows-amd64.exe` | Agent binary only |
             | macOS (manual) | `aigw-darwin-arm64` / `aigw-darwin-amd64` | Agent binary only |
-            | Linux (x86_64) | `aigw-linux-amd64` | Agent binary |
-            | Linux (ARM) | `aigw-linux-arm64` | Agent binary |
+            | Linux (manual) | `aigw-linux-amd64` / `aigw-linux-arm64` | Agent binary only |
 
             ### Quick Start
 
@@ -197,11 +225,11 @@ jobs:
             2. Double-click to run the installer (right-click → Open if Gatekeeper blocks)
             3. TrustGate Agent starts automatically as a launchd service
 
-            **Linux (manual):**
+            **Linux (Debian/Ubuntu):**
             ```bash
-            chmod +x aigw-linux-*
-            ./aigw-linux-amd64 init --provider bedrock --with-samples
-            ./aigw-linux-amd64 serve --mock-backend
+            sudo dpkg -i trustgate_*_amd64.deb
+            # Agent starts automatically via systemd
+            sudo systemctl status trustgate
             ```
 
             ### Verify Installation

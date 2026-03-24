@@ -1,0 +1,24 @@
+[Unit]
+Description=TrustGate AI Zero Trust Gateway Agent
+Documentation=https://github.com/sator-inc-com/trustgate-core
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/aigw serve --config /etc/trustgate/agent.yaml
+WorkingDirectory=/etc/trustgate
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=trustgate
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/log/trustgate /var/lib/trustgate
+
+[Install]
+WantedBy=multi-user.target
