@@ -182,15 +182,36 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: artifacts/
+          name: trustgate-installer
+          path: artifacts/windows/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: trustgate-installer-macos-arm64
+          path: artifacts/macos-arm64/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: trustgate-installer-macos-amd64
+          path: artifacts/macos-amd64/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: trustgate-installer-linux-amd64
+          path: artifacts/linux-amd64/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: trustgate-installer-linux-arm64
+          path: artifacts/linux-arm64/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/trustgate-installer/TrustGate-Setup-*.exe
-            artifacts/trustgate-installer-macos-*/TrustGate-Setup-*.pkg
-            artifacts/trustgate-installer-linux-*/trustgate_*.deb
+            artifacts/windows/TrustGate-Setup-*.exe
+            artifacts/macos-*/TrustGate-Setup-*.pkg
+            artifacts/linux-*/trustgate_*.deb
           generate_release_notes: true
           body: |
             ## TrustGate ${{ github.ref_name }}
