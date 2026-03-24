@@ -10,26 +10,32 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - goos: linux
             goarch: amd64
             suffix: linux-amd64
+            runner: ubuntu-latest
           - goos: linux
             goarch: arm64
             suffix: linux-arm64
+            runner: ubuntu-latest
           - goos: windows
             goarch: amd64
             suffix: windows-amd64
             ext: .exe
+            runner: ubuntu-latest
           - goos: darwin
             goarch: amd64
             suffix: darwin-amd64
+            runner: macos-13
           - goos: darwin
             goarch: arm64
             suffix: darwin-arm64
+            runner: macos-latest
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -81,7 +87,6 @@ jobs:
         env:
           GOOS: darwin
           GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: '0'
         run: |
           go build \
             -ldflags "-X main.version=${{ github.ref_name }}" \
