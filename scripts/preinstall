@@ -1,0 +1,26 @@
+#!/bin/bash
+# TrustGate macOS .pkg pre-install script
+# Stops existing services before upgrade
+
+set -e
+
+AGENT_PLIST="/Library/LaunchDaemons/com.trustgate.agent.plist"
+TRAY_PLIST="/Library/LaunchAgents/com.trustgate.tray.plist"
+
+# Stop existing agent service
+if [ -f "$AGENT_PLIST" ]; then
+    echo "Stopping existing TrustGate Agent service..."
+    launchctl unload "$AGENT_PLIST" 2>/dev/null || true
+fi
+
+# Stop existing tray app
+if [ -f "$TRAY_PLIST" ]; then
+    echo "Stopping existing TrustGate Tray..."
+    launchctl unload "$TRAY_PLIST" 2>/dev/null || true
+fi
+
+# Kill any remaining processes
+killall aigw 2>/dev/null || true
+killall aigw-tray 2>/dev/null || true
+
+exit 0

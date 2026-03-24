@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; }
+h1 { font-size: 22px; }
+p { font-size: 14px; line-height: 1.6; color: #333; }
+ul { font-size: 14px; line-height: 1.8; }
+code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>TrustGate &mdash; AI Zero Trust Gateway</h1>
+<p>Inspect and control AI input/output in real time.</p>
+<p>This installer will set up the following components:</p>
+<ul>
+  <li><strong>TrustGate Agent</strong> &mdash; Text inspection, policy enforcement, LLM proxy</li>
+  <li><strong>Tray Manager</strong> &mdash; System tray status indicator (Apple Silicon only)</li>
+  <li><strong>Default configuration</strong> &mdash; Standalone mode with sample policies</li>
+</ul>
+<p>The Agent will be registered as a system service and start automatically on boot. It listens on <code>localhost:8787</code>.</p>
+<p>After installation, verify with:</p>
+<p><code>curl -s http://localhost:8787/v1/health | jq .</code></p>
+</body>
+</html>

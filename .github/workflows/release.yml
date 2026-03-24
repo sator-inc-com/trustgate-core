@@ -124,8 +124,34 @@ jobs:
           name: trustgate-installer
           path: scripts/Output/TrustGate-Setup-*.exe
 
+  macos-installer:
+    needs: build
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            artifact: aigw-darwin-arm64
+          - arch: amd64
+            artifact: aigw-darwin-amd64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/
+
+      - name: Build .pkg installer
+        run: bash scripts/build-macos-pkg.sh "${{ github.ref_name }}" "${{ matrix.arch }}" dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trustgate-installer-macos-${{ matrix.arch }}
+          path: TrustGate-Setup-*.pkg
+
   release:
-    needs: [build, windows-installer]
+    needs: [build, windows-installer, macos-installer]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -138,6 +164,7 @@ jobs:
           files: |
             artifacts/aigw-*/aigw-*
             artifacts/trustgate-installer/TrustGate-Setup-*.exe
+            artifacts/trustgate-installer-macos-*/TrustGate-Setup-*.pkg
           generate_release_notes: true
           body: |
             ## TrustGate ${{ github.ref_name }}
@@ -150,10 +177,11 @@ jobs:
 
             | Platform | File | Description |
             |----------|------|-------------|
-            | **Windows (recommended)** | `TrustGate-Setup-*.exe` | Installer (Agent + Tray Manager + browser extension) |
+            | **Windows** | `TrustGate-Setup-*.exe` | Installer (Agent + Tray Manager + browser extension) |
+            | **macOS (Apple Silicon)** | `TrustGate-Setup-*-arm64.pkg` | Installer (Agent + Tray Manager) |
+            | **macOS (Intel)** | `TrustGate-Setup-*-amd64.pkg` | Installer (Agent only) |
             | Windows (manual) | `aigw-windows-amd64.exe` | Agent binary only |
-            | macOS (Apple Silicon) | `aigw-darwin-arm64` | Agent binary (M1/M2/M3/M4) |
-            | macOS (Intel) | `aigw-darwin-amd64` | Agent binary (Intel Mac) |
+            | macOS (manual) | `aigw-darwin-arm64` / `aigw-darwin-amd64` | Agent binary only |
             | Linux (x86_64) | `aigw-linux-amd64` | Agent binary |
             | Linux (ARM) | `aigw-linux-arm64` | Agent binary |
 
@@ -164,19 +192,16 @@ jobs:
             2. Follow the installer wizard
             3. TrustGate Agent starts automatically as a Windows Service
 
-            **macOS / Linux:**
+            **macOS:**
+            1. Download `TrustGate-Setup-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
+            2. Double-click to run the installer (right-click → Open if Gatekeeper blocks)
+            3. TrustGate Agent starts automatically as a launchd service
+
+            **Linux (manual):**
             ```bash
-            # Make executable
-            chmod +x aigw-*
-
-            # Initialize configuration
-            ./aigw init --provider bedrock --with-samples
-
-            # Check environment
-            ./aigw doctor
-
-            # Start (with mock backend for testing)
-            ./aigw serve --mock-backend
+            chmod +x aigw-linux-*
+            ./aigw-linux-amd64 init --provider bedrock --with-samples
+            ./aigw-linux-amd64 serve --mock-backend
             ```
 
             ### Verify Installation

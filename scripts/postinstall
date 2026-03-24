@@ -1,0 +1,45 @@
+#!/bin/bash
+# TrustGate macOS .pkg post-install script
+# Sets up directories, fixes plist paths, and starts the agent service
+
+set -e
+
+CONFIG_DIR="/Library/Application Support/TrustGate"
+LOG_DIR="/Library/Logs/TrustGate"
+CONFIG_PATH="${CONFIG_DIR}/agent.yaml"
+AGENT_PLIST="/Library/LaunchDaemons/com.trustgate.agent.plist"
+TRAY_PLIST="/Library/LaunchAgents/com.trustgate.tray.plist"
+
+# Create directories
+mkdir -p "$LOG_DIR"
+chmod 755 "$LOG_DIR"
+
+# Fix plist placeholders
+if [ -f "$AGENT_PLIST" ]; then
+    sed -i '' "s|__CONFIG_PATH__|${CONFIG_PATH}|g" "$AGENT_PLIST"
+    sed -i '' "s|__CONFIG_DIR__|${CONFIG_DIR}|g" "$AGENT_PLIST"
+    sed -i '' "s|__LOG_DIR__|${LOG_DIR}|g" "$AGENT_PLIST"
+fi
+
+# Load and start agent service
+if [ -f "$AGENT_PLIST" ]; then
+    echo "Starting TrustGate Agent service..."
+    launchctl load "$AGENT_PLIST" 2>/dev/null || true
+fi
+
+# Load tray app (if installed and binary exists)
+if [ -f "$TRAY_PLIST" ] && [ -f "/usr/local/bin/aigw-tray" ]; then
+    echo "Registering TrustGate Tray for auto-launch..."
+    launchctl load "$TRAY_PLIST" 2>/dev/null || true
+fi
+
+# Wait briefly and verify
+sleep 2
+if curl -s http://localhost:8787/v1/health > /dev/null 2>&1; then
+    echo "TrustGate Agent is running."
+else
+    echo "Note: Agent may take a few seconds to start. Check with:"
+    echo "  curl -s http://localhost:8787/v1/health | jq ."
+fi
+
+exit 0
