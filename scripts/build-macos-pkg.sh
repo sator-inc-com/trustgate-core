@@ -13,6 +13,7 @@ VERSION="${1:?Usage: $0 <version> <arch> [binary-dir]}"
 VERSION="${VERSION#v}"  # Strip leading 'v' for installer compatibility
 ARCH="${2:?Usage: $0 <version> <arch> [binary-dir]}"
 BINARY_DIR="${3:-dist}"
+SIGN_IDENTITY="${MACOS_SIGN_IDENTITY:-}"  # "Developer ID Installer: ..." (empty = unsigned)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -95,11 +96,22 @@ pkgbuild \
 
 # --- Build product package ---
 echo "Building product package..."
-productbuild \
-    --distribution "${WORK_DIR}/distribution.xml" \
-    --resources "${PKG_RESOURCES}" \
-    --package-path "${WORK_DIR}" \
-    "${OUTPUT_PKG}"
+if [ -n "$SIGN_IDENTITY" ]; then
+    echo "  Signing with: ${SIGN_IDENTITY}"
+    productbuild \
+        --distribution "${WORK_DIR}/distribution.xml" \
+        --resources "${PKG_RESOURCES}" \
+        --package-path "${WORK_DIR}" \
+        --sign "${SIGN_IDENTITY}" \
+        "${OUTPUT_PKG}"
+else
+    echo "  WARNING: No signing identity set (unsigned package)"
+    productbuild \
+        --distribution "${WORK_DIR}/distribution.xml" \
+        --resources "${PKG_RESOURCES}" \
+        --package-path "${WORK_DIR}" \
+        "${OUTPUT_PKG}"
+fi
 
 echo ""
 echo "=== Done ==="
