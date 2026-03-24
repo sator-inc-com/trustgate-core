@@ -26,6 +26,7 @@ import (
 // StatsRecorder records events for stats aggregation (sync client).
 type StatsRecorder interface {
 	RecordEvent(action, detector, userID, policyName string)
+	RecordFalsePositive(policyName string)
 }
 
 // Server is the main TrustGate gateway server.
@@ -184,6 +185,9 @@ func (s *Server) setupRoutes() chi.Router {
 	r.Get("/v1/health", s.handleHealth)
 	r.Post("/v1/inspect", s.handleInspect)
 	r.Post("/v1/chat/completions", s.handleChatCompletions)
+
+	// Audit feedback
+	r.Post("/v1/audit/{audit_id}/feedback", s.handleAuditFeedback)
 
 	// Content inspection (async file upload)
 	r.Post("/v1/inspect/file", s.handleInspectFile)

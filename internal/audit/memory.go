@@ -87,6 +87,25 @@ func (m *MemoryLogger) Query(opts QueryOpts) ([]Record, error) {
 	return all, nil
 }
 
+func (m *MemoryLogger) GetByID(auditID string) (*Record, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	size := m.maxSize
+	if !m.full {
+		size = m.head
+	}
+
+	for i := 0; i < size; i++ {
+		idx := (m.head - 1 - i + m.maxSize) % m.maxSize
+		r := m.records[idx]
+		if r.AuditID == auditID {
+			return &r, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
 func (m *MemoryLogger) Count() (int, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

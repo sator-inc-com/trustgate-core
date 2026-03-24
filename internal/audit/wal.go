@@ -236,6 +236,26 @@ func (w *WALWriter) Query(opts QueryOpts) ([]Record, error) {
 	return results, nil
 }
 
+// GetByID searches the in-memory ring buffer for a record with the given audit ID.
+func (w *WALWriter) GetByID(auditID string) (*Record, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	size := w.ringSize
+	if !w.ringFull {
+		size = w.ringHead
+	}
+
+	for i := 0; i < size; i++ {
+		idx := (w.ringHead - 1 - i + w.ringSize) % w.ringSize
+		r := w.ring[idx]
+		if r.AuditID == auditID {
+			return &r, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
 // Count returns the number of records in the ring buffer.
 func (w *WALWriter) Count() (int, error) {
 	w.mu.Lock()

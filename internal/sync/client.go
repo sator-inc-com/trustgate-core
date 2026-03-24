@@ -276,6 +276,27 @@ func (c *Client) RecordEvent(action, detector, userID, policyName string) {
 	}
 }
 
+// RecordFalsePositive increments the false positive count for a policy.
+// The count is pushed to the Control Plane on the next stats push cycle.
+func (c *Client) RecordFalsePositive(policyName string) {
+	if policyName == "" {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for i, p := range c.byPolicy {
+		if p.PolicyName == policyName {
+			c.byPolicy[i].FalsePositiveCount++
+			return
+		}
+	}
+	c.byPolicy = append(c.byPolicy, policyTriggerCount{
+		PolicyName:         policyName,
+		FalsePositiveCount: 1,
+	})
+}
+
 func (c *Client) heartbeatLoop() {
 	ticker := time.NewTicker(time.Duration(c.cfg.HeartbeatSec) * time.Second)
 	defer ticker.Stop()

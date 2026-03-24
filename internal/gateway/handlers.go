@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"github.com/trustgate/trustgate/internal/adapter"
@@ -480,6 +481,110 @@ func (s *Server) logChatAudit(auditID string, start time.Time, id identity.Ident
 		}
 		s.statsRecorder.RecordEvent(evalResult.Action, detectorName, id.UserID, evalResult.PolicyName)
 	}
+}
+
+// FeedbackRequest is the request body for POST /v1/audit/{audit_id}/feedback.
+type FeedbackRequest struct {
+	Type     string `json:"type"`               // false_positive | confirmed_threat | other
+	Comment  string `json:"comment,omitempty"`
+	Reporter string `json:"reporter,omitempty"`
+}
+
+// FeedbackResponse is the response body for POST /v1/audit/{audit_id}/feedback.
+type FeedbackResponse struct {
+	AuditID string `json:"audit_id"`
+	Type    string `json:"type"`
+	Status  string `json:"status"`
+}
+
+var validFeedbackTypes = map[string]bool{
+	"false_positive":   true,
+	"confirmed_threat": true,
+	"other":            true,
+}
+
+// handleAuditFeedback handles POST /v1/audit/{audit_id}/feedback.
+func (s *Server) handleAuditFeedback(w http.ResponseWriter, r *http.Request) {
+	auditID := chi.URLParam(r, "audit_id")
+	if auditID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": map[string]string{
+				"message": "audit_id is required",
+				"type":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	var req FeedbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": map[string]string{
+				"message": "invalid request body",
+				"type":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	if !validFeedbackTypes[req.Type] {
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": map[string]string{
+				"message": "type must be one of: false_positive, confirmed_threat, other",
+				"type":    "invalid_request",
+			},
+		})
+		return
+	}
+
+	// Look up the audit record
+	if s.auditStore == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]interface{}{
+			"error": map[string]string{
+				"message": "audit store not available",
+				"type":    "server_error",
+			},
+		})
+		return
+	}
+
+	record, err := s.auditStore.GetByID(auditID)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]interface{}{
+			"error": map[string]string{
+				"message": "audit record not found",
+				"type":    "not_found",
+			},
+		})
+		return
+	}
+
+	// Use reporter from request, fallback to identity header
+	reporter := req.Reporter
+	if reporter == "" {
+		reporter = r.Header.Get("X-TrustGate-User")
+	}
+
+	// Log the feedback
+	s.logger.Info().
+		Str("audit_id", auditID).
+		Str("feedback_type", req.Type).
+		Str("reporter", reporter).
+		Str("comment", req.Comment).
+		Str("policy", record.PolicyName).
+		Str("original_action", record.Action).
+		Msg("audit_feedback")
+
+	// Update false positive count in stats (managed mode only)
+	if req.Type == "false_positive" && s.statsRecorder != nil && record.PolicyName != "" {
+		s.statsRecorder.RecordFalsePositive(record.PolicyName)
+	}
+
+	writeJSON(w, http.StatusOK, FeedbackResponse{
+		AuditID: auditID,
+		Type:    req.Type,
+		Status:  "recorded",
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

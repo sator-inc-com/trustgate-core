@@ -139,6 +139,21 @@ func (s *Store) Query(opts QueryOpts) ([]Record, error) {
 	return records, rows.Err()
 }
 
+// GetByID retrieves a single audit record by its ID.
+func (s *Store) GetByID(auditID string) (*Record, error) {
+	var r Record
+	var ts string
+	err := s.db.QueryRow(
+		"SELECT audit_id, timestamp, user_id, role, department, action, policy_name, reason, detections, risk_score, duration_ms, app_id FROM audit_logs WHERE audit_id = ?",
+		auditID,
+	).Scan(&r.AuditID, &ts, &r.UserID, &r.Role, &r.Department, &r.Action, &r.PolicyName, &r.Reason, &r.Detections, &r.RiskScore, &r.DurationMs, &r.AppID)
+	if err != nil {
+		return nil, ErrNotFound
+	}
+	r.Timestamp, _ = time.Parse(time.RFC3339Nano, ts)
+	return &r, nil
+}
+
 // Count returns the total number of audit logs.
 func (s *Store) Count() (int, error) {
 	var count int

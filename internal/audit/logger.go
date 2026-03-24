@@ -42,6 +42,9 @@ type QueryOpts struct {
 	Limit     int
 }
 
+// ErrNotFound is returned when an audit record is not found.
+var ErrNotFound = fmt.Errorf("audit record not found")
+
 // Logger is the interface for audit log backends.
 // Standalone mode uses MemoryLogger (ring buffer, no disk).
 // Managed mode uses WALWriter (JSONLines with hash chain).
@@ -49,6 +52,7 @@ type QueryOpts struct {
 type Logger interface {
 	Write(r Record) error
 	Query(opts QueryOpts) ([]Record, error)
+	GetByID(auditID string) (*Record, error)
 	Count() (int, error)
 	Close() error
 }
