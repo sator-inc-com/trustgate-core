@@ -142,7 +142,7 @@ jobs:
           body: |
             ## TrustGate ${{ github.ref_name }}
 
-            AI Zero Trust Gateway — AI の入出力をリアルタイムで検査・制御します。
+            AI Zero Trust Gateway — Inspect and control AI input/output in real time.
 
             ---
 
