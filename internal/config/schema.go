@@ -1,14 +1,17 @@
 package config
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type Config struct {
 	Version string `yaml:"version"`
 	Mode    string `yaml:"mode"` // standalone | managed
 
-	Listen   ListenConfig   `yaml:"listen"`
-	Identity IdentityConfig `yaml:"identity"`
-	Context  ContextConfig  `yaml:"context"`
+	Listen    ListenConfig    `yaml:"listen"`
+	Identity  IdentityConfig `yaml:"identity"`
+	Workforce WorkforceConfig `yaml:"workforce"`
 
 	Detectors          DetectorConfig          `yaml:"detectors"`
 	ResponseInspection ResponseInspectionConfig `yaml:"response_inspection"`
@@ -71,24 +74,57 @@ type IdentityConfig struct {
 	AnonymousRole string            `yaml:"anonymous_role"`
 }
 
-type ContextConfig struct {
-	Session     SessionConfig     `yaml:"session"`
-	RiskScoring RiskScoringConfig `yaml:"risk_scoring"`
+// WorkforceConfig configures Workforce mode settings.
+// When Enabled, only /v1/inspect is active (no LLM proxy).
+type WorkforceConfig struct {
+	Enabled     bool             `yaml:"enabled"`
+	TargetSites TargetSitesConfig `yaml:"target_sites"`
 }
 
-type SessionConfig struct {
-	TTL   time.Duration `yaml:"ttl"`
-	Store string        `yaml:"store"` // memory
+// TargetSitesConfig defines which sites the browser extension should monitor.
+// Include lists sites to inspect. Exclude lists sites to skip even if included.
+// Patterns use glob-style matching (e.g., "https://chatgpt.com/*").
+type TargetSitesConfig struct {
+	Include []string `yaml:"include"`
+	Exclude []string `yaml:"exclude"`
 }
 
-type RiskScoringConfig struct {
-	InjectionDetected float64 `yaml:"injection_detected"`
-	PIIDetected       float64 `yaml:"pii_detected"`
-	ConfidentialDetected float64 `yaml:"confidential_detected"`
-	BlockOccurred     float64 `yaml:"block_occurred"`
-	DecayPerMinute    float64 `yaml:"decay_per_minute"`
-	ThresholdWarn     float64 `yaml:"threshold_warn"`
-	ThresholdBlock    float64 `yaml:"threshold_block"`
+// IsSiteAllowed checks if the given site URL is allowed by the target_sites config.
+// Returns true if include list is empty (all sites allowed).
+// A site must match at least one include pattern and no exclude patterns.
+// Patterns use prefix matching with trailing "*" (e.g., "https://chatgpt.com/*").
+func (t TargetSitesConfig) IsSiteAllowed(siteURL string) bool {
+	if len(t.Include) == 0 {
+		return true
+	}
+
+	included := false
+	for _, pattern := range t.Include {
+		if matchGlob(pattern, siteURL) {
+			included = true
+			break
+		}
+	}
+	if !included {
+		return false
+	}
+
+	for _, pattern := range t.Exclude {
+		if matchGlob(pattern, siteURL) {
+			return false
+		}
+	}
+	return true
+}
+
+// matchGlob matches a URL against a simple glob pattern.
+// Supports trailing "*" as wildcard (e.g., "https://chatgpt.com/*" matches "https://chatgpt.com/c/123").
+// Exact match is also supported (e.g., "chatgpt.com" matches "chatgpt.com").
+func matchGlob(pattern, url string) bool {
+	if strings.HasSuffix(pattern, "*") {
+		return strings.HasPrefix(url, pattern[:len(pattern)-1])
+	}
+	return pattern == url
 }
 
 type DetectorConfig struct {

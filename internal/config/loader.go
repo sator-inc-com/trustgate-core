@@ -52,19 +52,16 @@ func defaults() *Config {
 			OnMissing:     "anonymous",
 			AnonymousRole: "guest",
 		},
-		Context: ContextConfig{
-			Session: SessionConfig{
-				TTL:   30 * time.Minute,
-				Store: "memory",
-			},
-			RiskScoring: RiskScoringConfig{
-				InjectionDetected:    0.4,
-				PIIDetected:          0.2,
-				ConfidentialDetected: 0.3,
-				BlockOccurred:        0.3,
-				DecayPerMinute:       0.01,
-				ThresholdWarn:        0.5,
-				ThresholdBlock:       0.8,
+		Workforce: WorkforceConfig{
+			Enabled: false,
+			TargetSites: TargetSitesConfig{
+				Include: []string{
+					"https://chatgpt.com/*",
+					"https://chat.openai.com/*",
+					"https://gemini.google.com/*",
+					"https://claude.ai/*",
+					"https://copilot.microsoft.com/*",
+				},
 			},
 		},
 		Detectors: DetectorConfig{

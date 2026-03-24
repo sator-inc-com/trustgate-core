@@ -71,6 +71,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"version": "0.1.0",
 		"mode":    s.cfg.Mode,
 	}
+	if s.cfg.Workforce.Enabled {
+		resp["workforce"] = map[string]interface{}{
+			"target_sites": s.cfg.Workforce.TargetSites,
+		}
+	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -97,6 +102,16 @@ func (s *Server) handleInspect(w http.ResponseWriter, r *http.Request) {
 			"action":     "allow",
 			"audit_id":   auditID,
 			"detections": []interface{}{},
+		})
+		return
+	}
+
+	// Check target_sites filter (Workforce mode)
+	if req.Context.URL != "" && !s.cfg.Workforce.TargetSites.IsSiteAllowed(req.Context.URL) {
+		writeJSON(w, http.StatusOK, InspectResponse{
+			Action:     "allow",
+			AuditID:    auditID,
+			Detections: []MaskedFinding{},
 		})
 		return
 	}
