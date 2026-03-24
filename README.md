@@ -35,8 +35,8 @@ Download the installer for your platform from the [Releases](https://github.com/
 
 ### macOS
 
-1. Download `TrustGate-macOS-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
-2. Double-click to run the installer (right-click → Open if Gatekeeper blocks)
+1. Download `TrustGate-macOS-*-arm64.pkg`
+2. Double-click to run the installer
 3. TrustGate Agent starts automatically as a launchd service
 
 ### Linux (Debian/Ubuntu)

@@ -27,10 +27,6 @@ jobs:
             ext: .exe
             runner: ubuntu-latest
           - goos: darwin
-            goarch: amd64
-            suffix: darwin-amd64
-            runner: macos-latest
-          - goos: darwin
             goarch: arm64
             suffix: darwin-arm64
             runner: macos-latest
@@ -127,40 +123,49 @@ jobs:
   macos-installer:
     needs: build
     runs-on: macos-latest
-    strategy:
-      matrix:
-        include:
-          - arch: arm64
-            artifact: aigw-darwin-arm64
-          - arch: amd64
-            artifact: aigw-darwin-amd64
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
+          name: aigw-darwin-arm64
           path: dist/
 
-      - name: Import signing certificate
+      - name: Import signing certificates
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_APP_CERTIFICATE_P12: ${{ secrets.APPLE_APP_CERTIFICATE_P12 }}
+          APPLE_APP_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_APP_CERTIFICATE_PASSWORD }}
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
-          CERT_PATH=$RUNNER_TEMP/certificate.p12
-          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
           security create-keychain -p "" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          # Import Developer ID Installer certificate
+          CERT_PATH=$RUNNER_TEMP/installer.p12
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
           security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          # Import Developer ID Application certificate
+          APP_CERT_PATH=$RUNNER_TEMP/application.p12
+          echo "$APPLE_APP_CERTIFICATE_P12" | base64 --decode > "$APP_CERT_PATH"
+          security import "$APP_CERT_PATH" -P "$APPLE_APP_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Sign binaries
+        run: |
+          for bin in dist/aigw-*; do
+            chmod +x "$bin"
+            codesign --force --options runtime \
+              --sign "Developer ID Application: yosuke seno (3P7L77PES2)" \
+              "$bin"
+          done
 
       - name: Build and sign .pkg installer
         env:
           MACOS_SIGN_IDENTITY: "Developer ID Installer: yosuke seno (3P7L77PES2)"
-        run: bash scripts/build-macos-pkg.sh "${{ github.ref_name }}" "${{ matrix.arch }}" dist
+        run: bash scripts/build-macos-pkg.sh "${{ github.ref_name }}" arm64 dist
 
       - name: Notarize .pkg
         env:
@@ -182,7 +187,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: trustgate-installer-macos-${{ matrix.arch }}
+          name: trustgate-installer-macos-arm64
           path: TrustGate-macOS-*.pkg
 
   linux-installer:
@@ -223,12 +228,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: trustgate-installer-macos-arm64
-          path: artifacts/macos-arm64/
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: trustgate-installer-macos-amd64
-          path: artifacts/macos-amd64/
+          path: artifacts/macos/
 
       - uses: actions/download-artifact@v4
         with:
@@ -245,7 +245,7 @@ jobs:
         with:
           files: |
             artifacts/windows/TrustGate-Windows-*.exe
-            artifacts/macos-*/TrustGate-macOS-*.pkg
+            artifacts/macos/TrustGate-macOS-*.pkg
             artifacts/linux-*/TrustGate-Linux-*.deb
           generate_release_notes: true
           body: |
@@ -261,7 +261,6 @@ jobs:
             |----------|------|-------------|
             | **Windows** | `TrustGate-Windows-*.exe` | Installer (Agent + Tray Manager + browser extension) |
             | **macOS (Apple Silicon)** | `TrustGate-macOS-*-arm64.pkg` | Installer (Agent + Tray Manager) |
-            | **macOS (Intel)** | `TrustGate-macOS-*-amd64.pkg` | Installer (Agent only) |
             | **Linux (x86_64)** | `TrustGate-Linux-*-amd64.deb` | Debian/Ubuntu package with systemd service |
             | **Linux (ARM)** | `TrustGate-Linux-*-arm64.deb` | Debian/Ubuntu package with systemd service |
 
@@ -273,8 +272,8 @@ jobs:
             3. TrustGate Agent starts automatically as a Windows Service
 
             **macOS:**
-            1. Download `TrustGate-macOS-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
-            2. Double-click to run the installer (right-click → Open if Gatekeeper blocks)
+            1. Download `TrustGate-macOS-*-arm64.pkg`
+            2. Double-click to run the installer
             3. TrustGate Agent starts automatically as a launchd service
 
             **Linux (Debian/Ubuntu):**
