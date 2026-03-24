@@ -122,7 +122,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: trustgate-installer
-          path: scripts/Output/TrustGate-Setup-*.exe
+          path: scripts/Output/TrustGate-Windows-*.exe
 
   macos-installer:
     needs: build
@@ -148,7 +148,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: trustgate-installer-macos-${{ matrix.arch }}
-          path: TrustGate-Setup-*.pkg
+          path: TrustGate-macOS-*.pkg
 
   linux-installer:
     needs: build
@@ -174,7 +174,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: trustgate-installer-linux-${{ matrix.arch }}
-          path: trustgate_*.deb
+          path: TrustGate-Linux-*.deb
 
   release:
     needs: [build, windows-installer, macos-installer, linux-installer]
@@ -209,9 +209,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/windows/TrustGate-Setup-*.exe
-            artifacts/macos-*/TrustGate-Setup-*.pkg
-            artifacts/linux-*/trustgate_*.deb
+            artifacts/windows/TrustGate-Windows-*.exe
+            artifacts/macos-*/TrustGate-macOS-*.pkg
+            artifacts/linux-*/TrustGate-Linux-*.deb
           generate_release_notes: true
           body: |
             ## TrustGate ${{ github.ref_name }}
@@ -224,27 +224,27 @@ jobs:
 
             | Platform | File | Description |
             |----------|------|-------------|
-            | **Windows** | `TrustGate-Setup-*.exe` | Installer (Agent + Tray Manager + browser extension) |
-            | **macOS (Apple Silicon)** | `TrustGate-Setup-*-arm64.pkg` | Installer (Agent + Tray Manager) |
-            | **macOS (Intel)** | `TrustGate-Setup-*-amd64.pkg` | Installer (Agent only) |
-            | **Linux (x86_64)** | `trustgate_*_amd64.deb` | Debian/Ubuntu package with systemd service |
-            | **Linux (ARM)** | `trustgate_*_arm64.deb` | Debian/Ubuntu package with systemd service |
+            | **Windows** | `TrustGate-Windows-*.exe` | Installer (Agent + Tray Manager + browser extension) |
+            | **macOS (Apple Silicon)** | `TrustGate-macOS-*-arm64.pkg` | Installer (Agent + Tray Manager) |
+            | **macOS (Intel)** | `TrustGate-macOS-*-amd64.pkg` | Installer (Agent only) |
+            | **Linux (x86_64)** | `TrustGate-Linux-*-amd64.deb` | Debian/Ubuntu package with systemd service |
+            | **Linux (ARM)** | `TrustGate-Linux-*-arm64.deb` | Debian/Ubuntu package with systemd service |
 
             ### Quick Start
 
             **Windows:**
-            1. Download and run `TrustGate-Setup-*.exe`
+            1. Download and run `TrustGate-Windows-*.exe`
             2. Follow the installer wizard
             3. TrustGate Agent starts automatically as a Windows Service
 
             **macOS:**
-            1. Download `TrustGate-Setup-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
+            1. Download `TrustGate-macOS-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
             2. Double-click to run the installer (right-click → Open if Gatekeeper blocks)
             3. TrustGate Agent starts automatically as a launchd service
 
             **Linux (Debian/Ubuntu):**
             ```bash
-            sudo dpkg -i trustgate_*_amd64.deb
+            sudo dpkg -i TrustGate-Linux-*-amd64.deb
             # Agent starts automatically via systemd
             sudo systemctl status trustgate
             ```

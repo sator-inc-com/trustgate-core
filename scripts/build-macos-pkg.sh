@@ -5,7 +5,7 @@
 #   arch:       arm64 or amd64
 #   binary-dir: directory containing aigw binaries (default: dist/)
 #
-# Output: TrustGate-Setup-<version>-<arch>.pkg
+# Output: TrustGate-macOS-<version>-<arch>.pkg
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ WORK_DIR=$(mktemp -d)
 PKG_ROOT="${WORK_DIR}/root"
 PKG_SCRIPTS="${WORK_DIR}/scripts"
 PKG_RESOURCES="${WORK_DIR}/resources"
-OUTPUT_PKG="${REPO_DIR}/TrustGate-Setup-${VERSION}-${ARCH}.pkg"
+OUTPUT_PKG="${REPO_DIR}/TrustGate-macOS-${VERSION}-${ARCH}.pkg"
 
 cleanup() {
     rm -rf "$WORK_DIR"

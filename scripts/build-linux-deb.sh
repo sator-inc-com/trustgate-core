@@ -5,7 +5,7 @@
 #   arch:       amd64 or arm64
 #   binary-dir: directory containing aigw binary (default: dist/)
 #
-# Output: trustgate_<version>_<arch>.deb
+# Output: TrustGate-Linux-<version>-<arch>.deb
 #
 # Requirements: dpkg-deb (available on Ubuntu/Debian runners)
 
@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORK_DIR=$(mktemp -d)
 PKG_DIR="${WORK_DIR}/trustgate_${VERSION}_${DEB_ARCH}"
-OUTPUT_DEB="${REPO_DIR}/trustgate_${VERSION}_${DEB_ARCH}.deb"
+OUTPUT_DEB="${REPO_DIR}/TrustGate-Linux-${VERSION}-${DEB_ARCH}.deb"
 
 cleanup() {
     rm -rf "$WORK_DIR"

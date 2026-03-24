@@ -29,20 +29,20 @@ Download the installer for your platform from the [Releases](https://github.com/
 
 ### Windows
 
-1. Download and run `TrustGate-Setup-*.exe`
+1. Download and run `TrustGate-Windows-*.exe`
 2. Follow the installer wizard (choose Standalone or Managed mode)
 3. TrustGate Agent starts automatically as a Windows Service
 
 ### macOS
 
-1. Download `TrustGate-Setup-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
+1. Download `TrustGate-macOS-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
 2. Double-click to run the installer (right-click → Open if Gatekeeper blocks)
 3. TrustGate Agent starts automatically as a launchd service
 
 ### Linux (Debian/Ubuntu)
 
 ```bash
-sudo dpkg -i trustgate_*_amd64.deb
+sudo dpkg -i TrustGate-Linux-*-amd64.deb
 # Agent starts automatically via systemd
 sudo systemctl status trustgate
 ```
