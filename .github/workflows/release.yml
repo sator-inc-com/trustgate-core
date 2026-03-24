@@ -29,7 +29,7 @@ jobs:
           - goos: darwin
             goarch: amd64
             suffix: darwin-amd64
-            runner: macos-13
+            runner: macos-latest
           - goos: darwin
             goarch: arm64
             suffix: darwin-arm64
