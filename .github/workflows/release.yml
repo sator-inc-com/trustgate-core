@@ -139,3 +139,52 @@ jobs:
             artifacts/aigw-*/aigw-*
             artifacts/trustgate-installer/TrustGate-Setup-*.exe
           generate_release_notes: true
+          body: |
+            ## TrustGate ${{ github.ref_name }}
+
+            AI Zero Trust Gateway — AI の入出力をリアルタイムで検査・制御します。
+
+            ---
+
+            ### Downloads
+
+            | Platform | File | Description |
+            |----------|------|-------------|
+            | **Windows (recommended)** | `TrustGate-Setup-*.exe` | Installer (Agent + Tray Manager + browser extension) |
+            | Windows (manual) | `aigw-windows-amd64.exe` | Agent binary only |
+            | macOS (Apple Silicon) | `aigw-darwin-arm64` | Agent binary (M1/M2/M3/M4) |
+            | macOS (Intel) | `aigw-darwin-amd64` | Agent binary (Intel Mac) |
+            | Linux (x86_64) | `aigw-linux-amd64` | Agent binary |
+            | Linux (ARM) | `aigw-linux-arm64` | Agent binary |
+
+            ### Quick Start
+
+            **Windows:**
+            1. Download and run `TrustGate-Setup-*.exe`
+            2. Follow the installer wizard
+            3. TrustGate Agent starts automatically as a Windows Service
+
+            **macOS / Linux:**
+            ```bash
+            # Make executable
+            chmod +x aigw-*
+
+            # Initialize configuration
+            ./aigw init --provider bedrock --with-samples
+
+            # Check environment
+            ./aigw doctor
+
+            # Start (with mock backend for testing)
+            ./aigw serve --mock-backend
+            ```
+
+            ### Verify Installation
+
+            ```bash
+            curl -s http://localhost:8787/v1/health | jq .
+            ```
+
+            ---
+
+            > **Documentation:** See [README](https://github.com/sator-inc-com/trustgate-core#readme) for full setup guide.

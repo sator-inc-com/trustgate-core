@@ -38,3 +38,6 @@ audit_data/
 # Tray binary
 /aigw-tray
 /aigw-tray.exe
+
+# Claude Code
+CLAUDE.md

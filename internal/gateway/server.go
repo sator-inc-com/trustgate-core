@@ -234,6 +234,11 @@ func (s *Server) AuditWAL() *audit.WALWriter {
 	return nil
 }
 
+// Handler returns the HTTP handler for use with httptest or custom servers.
+func (s *Server) Handler() http.Handler {
+	return s.router
+}
+
 // Run starts the HTTP server and blocks until interrupted.
 func (s *Server) Run() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Listen.Host, s.cfg.Listen.Port)
