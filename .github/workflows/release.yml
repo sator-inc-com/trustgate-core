@@ -153,6 +153,9 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
 
+      - name: List downloaded artifacts
+        run: ls -la dist/
+
       - name: Sign binaries
         run: |
           for bin in dist/aigw-*; do
