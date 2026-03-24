@@ -14,6 +14,7 @@ VERSION="${VERSION#v}"  # Strip leading 'v' for installer compatibility
 ARCH="${2:?Usage: $0 <version> <arch> [binary-dir]}"
 BINARY_DIR="${3:-dist}"
 SIGN_IDENTITY="${MACOS_SIGN_IDENTITY:-}"  # "Developer ID Installer: ..." (empty = unsigned)
+APP_SIGN_IDENTITY="${MACOS_APP_SIGN_IDENTITY:-}"  # "Developer ID Application: ..." (empty = skip)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -50,6 +51,13 @@ if [ ! -f "$AGENT_BINARY" ]; then
 fi
 cp "$AGENT_BINARY" "${PKG_ROOT}/usr/local/bin/aigw"
 chmod 755 "${PKG_ROOT}/usr/local/bin/aigw"
+# Sign agent binary (required for notarization)
+if [ -n "$APP_SIGN_IDENTITY" ]; then
+    echo "  Signing aigw with: ${APP_SIGN_IDENTITY}"
+    codesign --force --options runtime \
+        --sign "$APP_SIGN_IDENTITY" \
+        "${PKG_ROOT}/usr/local/bin/aigw"
+fi
 
 TRAY_BINARY="${BINARY_DIR}/aigw-tray-darwin-${ARCH}"
 if [ -f "$TRAY_BINARY" ]; then
@@ -65,6 +73,13 @@ if [ -f "$TRAY_BINARY" ]; then
     # Copy app icon
     if [ -f "${SCRIPT_DIR}/AppIcon.icns" ]; then
         cp "${SCRIPT_DIR}/AppIcon.icns" "${APP_DIR}/Resources/AppIcon.icns"
+    fi
+    # Sign the .app bundle (required for notarization)
+    if [ -n "$APP_SIGN_IDENTITY" ]; then
+        echo "  Signing .app bundle with: ${APP_SIGN_IDENTITY}"
+        codesign --force --options runtime --deep \
+            --sign "$APP_SIGN_IDENTITY" \
+            "${PKG_ROOT}/Applications/TrustGate.app"
     fi
     echo "  Tray manager: included (.app bundle)"
 else

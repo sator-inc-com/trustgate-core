@@ -156,18 +156,10 @@ jobs:
       - name: List downloaded artifacts
         run: ls -la dist/
 
-      - name: Sign binaries
-        run: |
-          for bin in dist/aigw-*; do
-            chmod +x "$bin"
-            codesign --force --options runtime \
-              --sign "Developer ID Application: yosuke seno (3P7L77PES2)" \
-              "$bin"
-          done
-
       - name: Build .pkg installer
         env:
           MACOS_SIGN_IDENTITY: "Developer ID Installer: yosuke seno (3P7L77PES2)"
+          MACOS_APP_SIGN_IDENTITY: "Developer ID Application: yosuke seno (3P7L77PES2)"
         run: bash scripts/build-macos-pkg.sh "${{ github.ref_name }}" arm64 dist
 
       - name: Notarize .pkg
