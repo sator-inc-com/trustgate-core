@@ -188,7 +188,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/aigw-*/aigw-*
             artifacts/trustgate-installer/TrustGate-Setup-*.exe
             artifacts/trustgate-installer-macos-*/TrustGate-Setup-*.pkg
             artifacts/trustgate-installer-linux-*/trustgate_*.deb
@@ -196,7 +195,7 @@ jobs:
           body: |
             ## TrustGate ${{ github.ref_name }}
 
-            AI Zero Trust Gateway — Inspect and control AI input/output in real time.
+            AI Zero Trust Gateway for Workforce — Monitor and control employee AI usage (ChatGPT, Gemini, Claude.ai, Copilot) in real time.
 
             ---
 
@@ -209,9 +208,6 @@ jobs:
             | **macOS (Intel)** | `TrustGate-Setup-*-amd64.pkg` | Installer (Agent only) |
             | **Linux (x86_64)** | `trustgate_*_amd64.deb` | Debian/Ubuntu package with systemd service |
             | **Linux (ARM)** | `trustgate_*_arm64.deb` | Debian/Ubuntu package with systemd service |
-            | Windows (manual) | `aigw-windows-amd64.exe` | Agent binary only |
-            | macOS (manual) | `aigw-darwin-arm64` / `aigw-darwin-amd64` | Agent binary only |
-            | Linux (manual) | `aigw-linux-amd64` / `aigw-linux-arm64` | Agent binary only |
 
             ### Quick Start
 

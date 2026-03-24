@@ -1,65 +1,89 @@
-# TrustGate
+# TrustGate for Workforce
 
-**AI Zero Trust Gateway** — Inspect and control AI input/output in real-time.
+**AI Zero Trust Gateway** — Monitor and control employee AI usage in real time.
 
-TrustGate deploys as a sidecar proxy or desktop agent, intercepting AI traffic to detect prompt injection, PII leakage, and confidential data exposure — all processed locally with zero external API calls.
+TrustGate inspects text sent to AI services (ChatGPT, Gemini, Claude.ai, Copilot) to detect prompt injection, PII leakage, and confidential data exposure — all processed locally with zero external API calls.
 
 ## Features
 
+- **Real-time inspection**: Detects PII, prompt injection, and confidential data before submission
+- **Browser extension**: Intercepts AI input/output at the DOM level (no HTTPS interception)
 - **Two-stage detection**: Regex (<5ms) + Prompt Guard 2 86M (1-5ms, gray-zone only)
-- **OpenAI-compatible API**: Drop-in proxy for Amazon Bedrock
-- **Inspection API**: `/v1/inspect` for browser extension / third-party integration
 - **Policy engine**: YAML-defined rules with shadow mode, whitelists, severity levels
-- **Audit log**: JSONLines WAL with SHA256 hash chain (tamper detection)
-- **Zero trust**: Raw text never leaves the customer environment — only hashes and metadata
+- **Site lockout**: 30-second block with full DOM replacement on policy violation
+- **Audit log**: SHA256 hash chain — raw text never leaves the customer environment
+- **Desktop Agent**: Runs locally as a system service (Windows Service / launchd / systemd)
 
-## Quick Start
+## Supported AI Services
+
+| Service | URL |
+|---------|-----|
+| ChatGPT | chatgpt.com |
+| Gemini | gemini.google.com |
+| Claude.ai | claude.ai |
+| Copilot | copilot.microsoft.com |
+
+## Installation
+
+Download the installer for your platform from the [Releases](https://github.com/sator-inc-com/trustgate-core/releases/latest) page.
+
+### Windows
+
+1. Download and run `TrustGate-Setup-*.exe`
+2. Follow the installer wizard (choose Standalone or Managed mode)
+3. TrustGate Agent starts automatically as a Windows Service
+
+### macOS
+
+1. Download `TrustGate-Setup-*-arm64.pkg` (Apple Silicon) or `*-amd64.pkg` (Intel)
+2. Double-click to run the installer (right-click → Open if Gatekeeper blocks)
+3. TrustGate Agent starts automatically as a launchd service
+
+### Linux (Debian/Ubuntu)
 
 ```bash
-# Build
-go build -o aigw ./cmd/aigw
-
-# Initialize
-./aigw init --provider bedrock --with-samples
-
-# Check environment
-./aigw doctor
-
-# Run (no AWS credentials needed)
-./aigw serve --mock-backend
-
-# Test
-curl -s http://localhost:8787/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{"model":"test","messages":[{"role":"user","content":"hello"}]}' | jq .
+sudo dpkg -i trustgate_*_amd64.deb
+# Agent starts automatically via systemd
+sudo systemctl status trustgate
 ```
 
-## Architecture
+### Verify Installation
 
-```
-aigw-server (Control Plane :9090)  ← policy, config, reports
-    ↑ stats push (60s) / policy pull
-┌──────────┐ ┌──────────┐ ┌──────────┐
-│App+Agent │ │App+Agent │ │App+Agent │  ← sidecar or Desktop Agent
-│  :8787   │ │  :8787   │ │  :8787   │
-└────┬─────┘ └────┬─────┘ └────┬─────┘
-     ▼             ▼            ▼
-  Bedrock       Bedrock      Bedrock
+```bash
+curl -s http://localhost:8787/v1/health | jq .
 ```
 
-## Product Lines
+## How It Works
 
-| | for Applications | for Workforce |
-|---|---|---|
-| Use case | Protect self-built AI systems | Monitor employee AI SaaS usage |
-| Deployment | Sidecar proxy | Desktop Agent + browser extension |
-| API | `/v1/chat/completions` | `/v1/inspect` |
+```
+Employee PC
+┌─────────────────────────────────────────┐
+│  Browser + TrustGate Extension          │
+│    ↓ text capture (DOM/fetch intercept) │
+│  TrustGate Agent (localhost:8787)       │
+│    ↓ inspect → detect → policy check   │
+│    ↓ ALLOW / WARN / BLOCK              │
+│  AI Service (ChatGPT, Gemini, etc.)    │
+└─────────────────────────────────────────┘
+```
+
+The browser extension captures text from AI service input fields and sends it to the local Agent via `POST /v1/inspect`. The Agent runs detection locally, evaluates policies, and returns an action. On BLOCK, the extension replaces the page with a 30-second lockout screen.
 
 ## Deployment Tiers
 
 - **Free**: Agent only (standalone, local policy, in-memory audit)
-- **Pro**: Agent + TrustGate Cloud (SaaS control plane)
-- **Enterprise**: Agent + on-prem Control Plane
+- **Pro**: Agent + TrustGate Cloud (SaaS control plane, managed policies, reports)
+- **Enterprise**: Agent + on-prem Control Plane (self-hosted)
+
+## Configuration
+
+After installation, the Agent config is located at:
+
+| Platform | Path |
+|----------|------|
+| Windows | `C:\ProgramData\TrustGate\agent.yaml` |
+| macOS | `/Library/Application Support/TrustGate/agent.yaml` |
+| Linux | `/etc/trustgate/agent.yaml` |
 
 ## License
 
