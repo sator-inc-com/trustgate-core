@@ -7,7 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/aigw-tray</string>
+        <string>/Applications/TrustGate.app/Contents/MacOS/aigw-tray</string>
     </array>
 
     <key>RunAtLoad</key>

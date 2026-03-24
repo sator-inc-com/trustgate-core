@@ -53,9 +53,20 @@ chmod 755 "${PKG_ROOT}/usr/local/bin/aigw"
 
 TRAY_BINARY="${BINARY_DIR}/aigw-tray-darwin-${ARCH}"
 if [ -f "$TRAY_BINARY" ]; then
-    cp "$TRAY_BINARY" "${PKG_ROOT}/usr/local/bin/aigw-tray"
-    chmod 755 "${PKG_ROOT}/usr/local/bin/aigw-tray"
-    echo "  Tray manager: included"
+    # Create .app bundle for Tray Manager
+    APP_DIR="${PKG_ROOT}/Applications/TrustGate.app/Contents"
+    mkdir -p "${APP_DIR}/MacOS"
+    mkdir -p "${APP_DIR}/Resources"
+    cp "$TRAY_BINARY" "${APP_DIR}/MacOS/aigw-tray"
+    chmod 755 "${APP_DIR}/MacOS/aigw-tray"
+    # Copy Info.plist with version substitution
+    cp "${SCRIPT_DIR}/Info.plist" "${APP_DIR}/Info.plist"
+    sed -i '' "s|__VERSION__|${VERSION}|g" "${APP_DIR}/Info.plist"
+    # Copy app icon
+    if [ -f "${SCRIPT_DIR}/AppIcon.icns" ]; then
+        cp "${SCRIPT_DIR}/AppIcon.icns" "${APP_DIR}/Resources/AppIcon.icns"
+    fi
+    echo "  Tray manager: included (.app bundle)"
 else
     echo "  Tray manager: not available for ${ARCH}, skipping"
 fi
@@ -67,7 +78,7 @@ cp "${SCRIPT_DIR}/default-policies.yaml" "${PKG_ROOT}/Library/Application Suppor
 # --- Copy launchd plists ---
 cp "${SCRIPT_DIR}/com.trustgate.agent.plist" "${PKG_ROOT}/Library/LaunchDaemons/"
 
-if [ -f "${PKG_ROOT}/usr/local/bin/aigw-tray" ]; then
+if [ -d "${PKG_ROOT}/Applications/TrustGate.app" ]; then
     cp "${SCRIPT_DIR}/com.trustgate.tray.plist" "${PKG_ROOT}/Library/LaunchAgents/"
 fi
 

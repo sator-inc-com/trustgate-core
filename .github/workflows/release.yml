@@ -162,7 +162,7 @@ jobs:
               "$bin"
           done
 
-      - name: Build and sign .pkg installer
+      - name: Build .pkg installer
         env:
           MACOS_SIGN_IDENTITY: "Developer ID Installer: yosuke seno (3P7L77PES2)"
         run: bash scripts/build-macos-pkg.sh "${{ github.ref_name }}" arm64 dist
