@@ -250,6 +250,16 @@ begin
     Lines.Add('  host: 127.0.0.1');
     Lines.Add('  port: 8787');
     Lines.Add('');
+    Lines.Add('workforce:');
+    Lines.Add('  enabled: true');
+    Lines.Add('  target_sites:');
+    Lines.Add('    include:');
+    Lines.Add('      - "https://chatgpt.com/*"');
+    Lines.Add('      - "https://chat.openai.com/*"');
+    Lines.Add('      - "https://gemini.google.com/*"');
+    Lines.Add('      - "https://claude.ai/*"');
+    Lines.Add('      - "https://copilot.microsoft.com/*"');
+    Lines.Add('');
     Lines.Add('detectors:');
     Lines.Add('  pii:');
     Lines.Add('    enabled: true');

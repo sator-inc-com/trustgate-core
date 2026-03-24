@@ -6,6 +6,18 @@ listen:
   port: 8787
   allow_debug: true
 
+workforce:
+  enabled: true
+  target_sites:
+    include:
+      - "https://chatgpt.com/*"
+      - "https://chat.openai.com/*"
+      - "https://gemini.google.com/*"
+      - "https://claude.ai/*"
+      - "https://copilot.microsoft.com/*"
+    # exclude:
+    #   - "https://docs.google.com/*"
+
 detectors:
   pii:
     enabled: true
