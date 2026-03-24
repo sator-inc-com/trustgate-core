@@ -24,5 +24,7 @@
 	<true/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Sator Inc. All rights reserved.</string>
 </dict>
 </plist>

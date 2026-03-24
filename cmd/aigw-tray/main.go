@@ -80,6 +80,19 @@ func handleClicks() {
 }
 
 func startAgent() {
+	// macOS: use launchctl to manage the agent service
+	if runtime.GOOS == "darwin" {
+		cmd := exec.Command("launchctl", "load", "/Library/LaunchDaemons/com.trustgate.agent.plist")
+		if err := cmd.Run(); err != nil {
+			// Already loaded, try kickstart
+			exec.Command("launchctl", "kickstart", "-k", "system/com.trustgate.agent").Run()
+		}
+		notify("TrustGate", "サービスを開始しました")
+		time.Sleep(2 * time.Second)
+		checkHealth()
+		return
+	}
+
 	aigw := findAigw()
 
 	// Try Windows service first (sc start TrustGate)
@@ -129,6 +142,15 @@ func startAgent() {
 }
 
 func stopAgent() {
+	// macOS: use launchctl to stop the agent service
+	if runtime.GOOS == "darwin" {
+		exec.Command("launchctl", "unload", "/Library/LaunchDaemons/com.trustgate.agent.plist").Run()
+		notify("TrustGate", "サービスを停止しました")
+		time.Sleep(1 * time.Second)
+		checkHealth()
+		return
+	}
+
 	// Try Windows service first
 	if runtime.GOOS == "windows" {
 		scCmd := exec.Command("sc", "stop", "TrustGate")
@@ -153,13 +175,9 @@ func stopAgent() {
 	}
 
 	// Fall back: kill process
-	if runtime.GOOS == "windows" {
-		killCmd := exec.Command("taskkill", "/F", "/IM", "aigw.exe")
-		hideCmd(killCmd)
-		killCmd.Run()
-	} else {
-		exec.Command("pkill", "-f", "aigw serve").Run()
-	}
+	killCmd := exec.Command("taskkill", "/F", "/IM", "aigw.exe")
+	hideCmd(killCmd)
+	killCmd.Run()
 	notify("TrustGate", "Agent を停止しました")
 	time.Sleep(500 * time.Millisecond)
 	checkHealth()
@@ -289,6 +307,9 @@ func findConfig() string {
 
 	if runtime.GOOS == "windows" {
 		candidates = append(candidates, `C:\ProgramData\TrustGate\agent.yaml`)
+	}
+	if runtime.GOOS == "darwin" {
+		candidates = append(candidates, "/Library/Application Support/TrustGate/agent.yaml")
 	}
 
 	// Current working directory
