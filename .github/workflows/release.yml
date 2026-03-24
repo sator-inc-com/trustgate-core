@@ -82,11 +82,8 @@ jobs:
             -o dist/aigw-tray-${{ matrix.suffix }}.exe \
             ./cmd/aigw-tray
 
-      - name: Build Tray Manager (macOS)
-        if: matrix.goos == 'darwin'
-        env:
-          GOOS: darwin
-          GOARCH: ${{ matrix.goarch }}
+      - name: Build Tray Manager (macOS native arch only)
+        if: matrix.goos == 'darwin' && matrix.goarch == 'arm64'
         run: |
           go build \
             -ldflags "-X main.version=${{ github.ref_name }}" \
