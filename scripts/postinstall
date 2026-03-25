@@ -5,35 +5,46 @@
 set -e
 
 CONFIG_DIR="/Library/Application Support/TrustGate"
-LOG_DIR="$HOME/Library/Logs/TrustGate"
 CONFIG_PATH="${CONFIG_DIR}/agent.yaml"
 AGENT_PLIST="/Library/LaunchAgents/com.trustgate.agent.plist"
 TRAY_PLIST="/Library/LaunchAgents/com.trustgate.tray.plist"
 
-# Create directories
+# Create config directory (owned by root, readable by all)
 mkdir -p "$CONFIG_DIR"
+
+# Get console user for user-owned directories
+CONSOLE_USER=$(stat -f "%Su" /dev/console 2>/dev/null || echo "")
+CONSOLE_GROUP=$(stat -f "%Sg" /dev/console 2>/dev/null || echo "staff")
+
+# Resolve log directory for the actual user (not root)
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+    USER_HOME=$(eval echo "~$CONSOLE_USER")
+    LOG_DIR="${USER_HOME}/Library/Logs/TrustGate"
+else
+    LOG_DIR="/tmp/TrustGate/logs"
+fi
+
 mkdir -p "$LOG_DIR"
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+    chown -R "$CONSOLE_USER:$CONSOLE_GROUP" "$LOG_DIR"
+fi
 chmod 755 "$LOG_DIR"
 
 # Fix plist placeholders
 if [ -f "$AGENT_PLIST" ]; then
     sed -i '' "s|__CONFIG_PATH__|${CONFIG_PATH}|g" "$AGENT_PLIST"
     sed -i '' "s|__CONFIG_DIR__|${CONFIG_DIR}|g" "$AGENT_PLIST"
-    sed -i '' "s|__LOG_DIR__|${LOG_DIR}|g" "$AGENT_PLIST"
+    sed -i '' "s|__LOG_PATH_OUT__|${LOG_DIR}/trustgate.log|g" "$AGENT_PLIST"
+    sed -i '' "s|__LOG_PATH_ERR__|${LOG_DIR}/trustgate.err|g" "$AGENT_PLIST"
 fi
 
-# Note: LaunchAgents are loaded per-user at login.
-# We don't load them here because postinstall runs as root.
-# Instead, open the tray app which will handle agent startup.
-if [ -d "/Applications/TrustGate.app" ]; then
-    CONSOLE_USER=$(stat -f "%Su" /dev/console)
-    if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
-        # Load agent plist for the console user
-        sudo -u "$CONSOLE_USER" launchctl load "$AGENT_PLIST" 2>/dev/null || true
-        # Load tray plist and open app
-        if [ -f "$TRAY_PLIST" ]; then
-            sudo -u "$CONSOLE_USER" launchctl load "$TRAY_PLIST" 2>/dev/null || true
-        fi
+# Load services for the console user and start the tray app
+if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
+    # Load agent plist
+    sudo -u "$CONSOLE_USER" launchctl load "$AGENT_PLIST" 2>/dev/null || true
+    # Load tray plist and open app
+    if [ -f "$TRAY_PLIST" ] && [ -d "/Applications/TrustGate.app" ]; then
+        sudo -u "$CONSOLE_USER" launchctl load "$TRAY_PLIST" 2>/dev/null || true
         sudo -u "$CONSOLE_USER" open /Applications/TrustGate.app 2>/dev/null || true
     fi
 fi

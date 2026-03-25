@@ -26,9 +26,9 @@
     <integer>5</integer>
 
     <key>StandardOutPath</key>
-    <string>__LOG_DIR__/trustgate.log</string>
+    <string>__LOG_PATH_OUT__</string>
     <key>StandardErrorPath</key>
-    <string>__LOG_DIR__/trustgate.err</string>
+    <string>__LOG_PATH_ERR__</string>
 
     <key>WorkingDirectory</key>
     <string>__CONFIG_DIR__</string>
