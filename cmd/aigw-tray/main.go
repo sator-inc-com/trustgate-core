@@ -82,14 +82,12 @@ func handleClicks() {
 func startAgent() {
 	// macOS: use launchctl to manage the agent service (LaunchAgents = user level, no sudo)
 	if runtime.GOOS == "darwin" {
-		domain := fmt.Sprintf("gui/%d", os.Getuid())
-		svcTarget := domain + "/com.trustgate.agent"
 		plist := "/Library/LaunchAgents/com.trustgate.agent.plist"
 
-		// Try bootstrap (modern API) first, fall back to load (legacy)
-		if err := exec.Command("launchctl", "bootstrap", domain, plist).Run(); err != nil {
-			// Already bootstrapped — kickstart instead
-			exec.Command("launchctl", "kickstart", "-k", svcTarget).Run()
+		// Try launchctl load first (registers + starts if RunAtLoad=true)
+		// If already loaded, use launchctl start to just start the job
+		if err := exec.Command("launchctl", "load", plist).Run(); err != nil {
+			exec.Command("launchctl", "start", "com.trustgate.agent").Run()
 		}
 		notify("TrustGate", "サービスを開始しました")
 		time.Sleep(2 * time.Second)
@@ -148,14 +146,11 @@ func startAgent() {
 func stopAgent() {
 	// macOS: use launchctl to stop the agent service (LaunchAgents = user level, no sudo)
 	if runtime.GOOS == "darwin" {
-		domain := fmt.Sprintf("gui/%d", os.Getuid())
-		svcTarget := domain + "/com.trustgate.agent"
+		plist := "/Library/LaunchAgents/com.trustgate.agent.plist"
 
-		// bootout (modern API) removes and stops the service
-		if err := exec.Command("launchctl", "bootout", svcTarget).Run(); err != nil {
-			// Fall back to legacy unload
-			exec.Command("launchctl", "unload", "/Library/LaunchAgents/com.trustgate.agent.plist").Run()
-		}
+		// Stop the job, then unload to fully deregister
+		exec.Command("launchctl", "stop", "com.trustgate.agent").Run()
+		exec.Command("launchctl", "unload", plist).Run()
 		// Kill any remaining process
 		exec.Command("killall", "aigw").Run()
 		notify("TrustGate", "サービスを停止しました")

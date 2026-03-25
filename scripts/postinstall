@@ -42,10 +42,9 @@ fi
 if [ -n "$CONSOLE_USER" ] && [ "$CONSOLE_USER" != "root" ]; then
     # Load agent plist
     sudo -u "$CONSOLE_USER" launchctl load "$AGENT_PLIST" 2>/dev/null || true
-    # Load tray plist and open app
+    # Load tray plist (RunAtLoad in plist will auto-start the app)
     if [ -f "$TRAY_PLIST" ] && [ -d "/Applications/TrustGate.app" ]; then
         sudo -u "$CONSOLE_USER" launchctl load "$TRAY_PLIST" 2>/dev/null || true
-        sudo -u "$CONSOLE_USER" open /Applications/TrustGate.app 2>/dev/null || true
     fi
 fi
 
