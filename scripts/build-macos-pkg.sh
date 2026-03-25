@@ -89,6 +89,10 @@ fi
 cp "${SCRIPT_DIR}/default-agent.yaml" "${PKG_ROOT}/Library/Application Support/TrustGate/agent.yaml"
 cp "${SCRIPT_DIR}/default-policies.yaml" "${PKG_ROOT}/Library/Application Support/TrustGate/policies.yaml"
 
+# --- Copy uninstall script ---
+cp "${SCRIPT_DIR}/uninstall-trustgate.sh" "${PKG_ROOT}/Library/Application Support/TrustGate/uninstall-trustgate.sh"
+chmod 755 "${PKG_ROOT}/Library/Application Support/TrustGate/uninstall-trustgate.sh"
+
 # --- Copy launchd plists (both as LaunchAgents for user-level control) ---
 cp "${SCRIPT_DIR}/com.trustgate.agent.plist" "${PKG_ROOT}/Library/LaunchAgents/"
 
