@@ -26,7 +26,7 @@ func newModelStatusCmd() *cobra.Command {
 		Short: "Check if a model is installed",
 		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			name := "prompt-guard-2-86m"
+			name := "prompt-guard-2-22m"
 			if len(args) > 0 {
 				name = args[0]
 			}
@@ -42,11 +42,11 @@ func newModelDownloadCmd() *cobra.Command {
 		Long: `Download model files for the LLM detector.
 
 Available models:
-  prompt-guard-2-86m   Meta Prompt Guard 2 (86M) — recommended (~350MB)
+  prompt-guard-2-22m   Meta Prompt Guard 2 (22M) — recommended (~82MB)
   prompt-guard-2-22m   Meta Prompt Guard 2 (22M) — lightweight (~100MB)`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name := "prompt-guard-2-86m"
+			name := "prompt-guard-2-22m"
 			if len(args) > 0 {
 				name = args[0]
 			}
@@ -57,7 +57,7 @@ Available models:
 			}
 
 			fmt.Printf("Downloading %s (%s)...\n", info.Name, info.Size)
-			fmt.Println("  (set HF_TOKEN env var for gated models)")
+			fmt.Println("  (from gravitee-io ONNX repository — no authentication required)")
 			fmt.Println()
 			lastFile := ""
 			err := detector.DownloadModel(name, func(file string, pct int) {

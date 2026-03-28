@@ -12,10 +12,10 @@ import _ "embed"
 //   2. go build -tags embed_model -o aigw ./cmd/aigw
 //
 // Expected files:
-//   internal/detector/models/model.onnx      (~90MB INT8 quantized)
-//   internal/detector/models/tokenizer.json   (~2MB)
+//   internal/detector/models/model.quant.onnx (~282MB quantized)
+//   internal/detector/models/tokenizer.json   (~16MB)
 
-//go:embed models/model.onnx
+//go:embed models/model.quant.onnx
 var embeddedModelData []byte
 
 //go:embed models/tokenizer.json

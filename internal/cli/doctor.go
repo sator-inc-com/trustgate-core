@@ -178,7 +178,7 @@ func newDoctorCmd() *cobra.Command {
 			// 7. LLM Model
 			modelName := cfg.Detectors.LLM.Model
 			if modelName == "" {
-				modelName = "prompt-guard-2-86m"
+				modelName = "prompt-guard-2-22m"
 			}
 			modelExists, _ := detector.ModelExists(modelName)
 			if modelExists {

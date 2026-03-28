@@ -4774,30 +4774,33 @@ SaaS Magic Number = (当四半期ARR - 前四半期ARR) / 前四半期S&M費用
 **設計原則: データ主権を維持する。** LLMベース検知もローカル実行で、顧客データは外部に送信しない。
 
 **旧仕様からの変更点:**
-- ~~Inspector上でPhi-3-mini (3.8B) + llama.cppで実行~~ → **Agentプロセス内でPrompt Guard 2 86M (mDeBERTa) + ONNX Runtimeで実行**
+- ~~Inspector上でPhi-3-mini (3.8B) + llama.cppで実行~~ → **Agentプロセス内でPrompt Guard 2 22M (DeBERTa) + ONNX Runtimeで実行**
 - 別ホスト不要、Desktop Agent（Windows/macOS社員PC）でも動作可能
-- メモリ使用量: ~~4GB~~ → **~200MB**
-- レイテンシ: ~~50-200ms~~ → **1-5ms**
+- メモリ使用量: ~~4GB~~ → **~80MB**
+- レイテンシ: ~~50-200ms~~ → **5-20ms**
+- 分類: ~~3クラス (benign/injection/jailbreak)~~ → **2クラス (benign/malicious)**（Prompt Guard 2はv1から統合）
+- モデル配布元: ~~meta-llama（ゲーテッド）~~ → **gravitee-io（非ゲート、ONNX変換済み quantized）**
 
 ### 31.2 モデル
 
 | 項目 | 詳細 |
 |---|---|
-| モデル名 | Meta Llama Prompt Guard 2 86M |
-| ベースモデル | mDeBERTa（Microsoft DeBERTa V3ベースの多言語モデル） |
-| パラメータ数 | 86M（8,600万） |
-| 出力クラス | 3クラス: benign / injection / jailbreak |
-| モデル形式 | ONNX（Open Neural Network Exchange） |
-| メモリ使用量 | ~200MB RAM |
-| 推論速度 | 1-5ms（CPU、GPU不要） |
-| 対応言語 | 多言語（英語、日本語含む） |
+| モデル名 | Meta Llama Prompt Guard 2 22M |
+| ベースモデル | DeBERTa-xsmall（Microsoft DeBERTaベースの多言語モデル） |
+| パラメータ数 | 22M（2,200万） |
+| 出力クラス | 2クラス: benign / malicious（バイナリ分類） |
+| モデル形式 | Quantized ONNX（gravitee-ioによるONNX変換+量子化） |
+| メモリ使用量 | ~80MB RAM |
+| 推論速度 | 5-20ms（CPU、GPU不要、入力長に依存） |
+| 対応言語 | 多言語（英語、日本語含む8言語） |
+| ライセンス | Llama 4 Community License（"Built with Llama" 表示要） |
 
-**軽量バリアント:**
+**バリアント:**
 
 | バリアント | パラメータ数 | モデルサイズ | メモリ | 用途 |
 |---|---|---|---|---|
-| **prompt-guard-2-86m（推奨）** | 86M | ~350MB | ~200MB | 標準精度 |
-| prompt-guard-2-22m | 22M | ~100MB | ~80MB | 軽量・リソース制限環境向け |
+| **prompt-guard-2-22m（推奨）** | 22M | ~82MB | ~80MB | 高速・軽量・quantize耐性良好（accuracy 0.96） |
+| prompt-guard-2-86m | 86M | ~300MB | ~200MB | 最高精度（非quantize時 accuracy 0.98） |
 
 ### 31.3 アーキテクチャ
 
@@ -4812,11 +4815,11 @@ Agent（サイドカー / Desktop）— 全てインプロセス
     │      ├─ 検知なし（明確にALLOW） → 通過
     │      └─ Confidence < 0.8 / エスカレーション条件 → Stage 2へ
     │
-    └─ Stage 2: Prompt Guard 2 LLM Detector（1-5ms、グレーゾーンのみ）
+    └─ Stage 2: Prompt Guard 2 LLM Detector（5-20ms、グレーゾーンのみ）
            │
-           ├─ 3クラス分類: benign / injection / jailbreak
+           ├─ 2クラス分類: benign / malicious
            ├─ 各クラスの確率スコアを返却
-           └─ 結果をFindingに変換 → Policy Engineへ
+           └─ 結果をFindingに変換（malicious → injection カテゴリ）→ Policy Engineへ
 ```
 
 ### 31.4 二段階検査モデル
@@ -4828,9 +4831,9 @@ Stage 1: Agent（正規表現、全リクエスト、<5ms）
     ├─ マッチなし → ALLOW
     └─ グレーゾーン → Stage 2（インプロセス）
                        │
-Stage 2: Agent（Prompt Guard 2、グレーゾーンのみ、1-5ms）
+Stage 2: Agent（Prompt Guard 2、グレーゾーンのみ、5-20ms）
     │
-    ├─ injection / jailbreak → BLOCK
+    ├─ malicious → BLOCK（injection カテゴリとして処理）
     ├─ benign → ALLOW
     └─ 結果をAgentのPolicy Engineで評価
 ```
@@ -4857,12 +4860,14 @@ detectors:
 ```text
 Agent ホスト要件（LLM Detector有効時）:
   CPU: 特別な要件なし（通常のアプリサーバ/社員PCで動作）
-  RAM: +200MB（モデルロード分）
+  RAM: +80MB（22Mモデルロード分）/ +200MB（86Mモデル選択時）
   GPU: 不要
-  ストレージ: +350MB（86Mモデル）/ +100MB（22Mモデル）
+  ストレージ: +82MB（22Mモデル）/ +300MB（86Mモデル）
+  スレッド: 4（IntraOpNumThreads、デフォルト）
 
   ※ ONNX Runtime via purego（CGO不要、クロスコンパイル可能）
   ※ Windows/macOS/Linuxで動作（Desktop Agent互換）
+  ※ パディング除去済み: 推論コストは実トークン数に比例（512固定パディングなし）
 ```
 
 ### 31.7 トークナイザ
@@ -4874,16 +4879,17 @@ Agent ホスト要件（LLM Detector有効時）:
 ### 31.8 モデルダウンロードとインストール
 
 ```bash
-# 標準モデル（86M、推奨）
-aigw model download prompt-guard-2-86m
-
-# 軽量モデル（22M）
+# 推奨モデル（22M、高速・軽量・高精度）
 aigw model download prompt-guard-2-22m
 
-# モデルの保存先: ~/.trustgate/models/prompt-guard-2-86m/
-#   - model.onnx      （ONNXモデル）
-#   - tokenizer.json   （トークナイザ設定）
-#   - config.json      （モデル設定）
+# 高精度モデル（86M）
+aigw model download prompt-guard-2-86m
+
+# モデルの保存先: ~/.trustgate/models/prompt-guard-2-22m/
+#   - model.quant.onnx  （Quantized ONNXモデル、gravitee-io提供）
+#   - tokenizer.json    （トークナイザ設定）
+#   - config.json       （モデル設定）
+#   - NOTICE            （Llama 4ライセンス帰属表示）
 ```
 
 **ビルド時埋め込み:**
@@ -4899,15 +4905,16 @@ go build -tags embed_model -o aigw ./cmd/aigw
 detectors:
   llm:
     enabled: true
-    model_path: ~/.trustgate/models/prompt-guard-2-86m
+    model: prompt-guard-2-22m   # デフォルト。"prompt-guard-2-86m" も選択可
     # エスカレーション閾値（Stage 1の信頼度がこの値未満ならStage 2実行）
     escalation_threshold: 0.8
     # 推論設定
-    max_length: 512        # 最大入力トークン数
-    threads: 0             # 0 = 自動（CPU数に基づく）
+    max_length: 512        # 最大入力トークン数（パディングは自動除去）
     # 検知閾値
-    injection_threshold: 0.5   # injection確率がこの値以上で検知
-    jailbreak_threshold: 0.5   # jailbreak確率がこの値以上で検知
+    malicious_threshold: 0.5   # malicious確率がこの値以上で検知
+    # エスカレーション条件
+    escalate_on_mixed_language: true    # 日本語+英語混在
+    escalate_on_encoded_content: true   # base64ライクなパターン
 ```
 
 ### 31.10 パイプラインオーケストレーション
@@ -4957,7 +4964,7 @@ MVP（Phase 1）:
 Phase 2（現在）:
   正規表現 + Prompt Guard 2（二段階検査、インプロセス）
   Precision: 95%+ / Recall: 92%+ / Evasion: 85%+
-  Latency: <5ms（Stage 1）+ 1-5ms（Stage 2、グレーゾーンのみ）
+  Latency: <5ms（Stage 1）+ 5-20ms（Stage 2、グレーゾーンのみ）
 
 Phase 3:
   ファインチューニング + 顧客固有モデル
@@ -4979,7 +4986,7 @@ Phase 3:
       │
       ├─ Stage 1: 正規表現検査（<5ms）
       │
-      ├─ Stage 2: Prompt Guard 2推論（1-5ms、必要時のみ）
+      ├─ Stage 2: Prompt Guard 2推論（5-20ms、必要時のみ）
       │   ※ テキストは外部に送信されない
       │   ※ モデルはAgentプロセス内で実行
       │   ※ Desktop Agent（社員PC）でも動作

@@ -67,9 +67,11 @@ func resultToFindings(result *PromptGuardResult, input string) []Finding {
 	if result.Label == "benign" || result.Confidence < 0.5 {
 		return nil
 	}
+	// Map "malicious" label to "injection" category for Stage 1 compatibility
+	category := "injection"
 	return []Finding{{
 		Detector:    "llm_injection",
-		Category:    result.Label,
+		Category:    category,
 		Severity:    classifySeverity(result.Confidence),
 		Confidence:  result.Confidence,
 		Description: fmt.Sprintf("mock LLM: %s (%.0f%%)", result.Label, result.Confidence*100),
@@ -115,7 +117,7 @@ func TestPipeline_HighConfidence_NoEscalation(t *testing.T) {
 func TestPipeline_LowConfidence_Escalates(t *testing.T) {
 	reg := newTestPipelineRegistry()
 	mock := newMockLLMDetector()
-	mock.addResponse("base64 encode", "injection", 0.92)
+	mock.addResponse("base64 encode", "malicious", 0.92)
 	reg.SetLLMDetector(mock)
 
 	// encoding_evasion has confidence 0.50 → below threshold (0.8) → escalate
@@ -143,7 +145,7 @@ func TestPipeline_LowConfidence_Escalates(t *testing.T) {
 func TestPipeline_MixedLanguage_Escalates(t *testing.T) {
 	reg := newTestPipelineRegistryWithMixedLang()
 	mock := newMockLLMDetector()
-	mock.addResponse("ignore previous", "injection", 0.95)
+	mock.addResponse("ignore previous", "malicious", 0.95)
 	reg.SetLLMDetector(mock)
 
 	// Japanese + English mixed → should escalate even without regex match
@@ -429,7 +431,7 @@ func TestPipeline_Summary(t *testing.T) {
 	t.Log("║                                                            ║")
 	t.Log("║  Stage 2: Prompt Guard 2 86M (gray-zone only, 1-5ms)     ║")
 	t.Log("║    • 86M params, ~200MB RAM, no GPU required              ║")
-	t.Log("║    • 3-class: benign / injection / jailbreak              ║")
+	t.Log("║    • 2-class: benign / malicious (binary)                 ║")
 	t.Log("║    • Runs in-process (same binary as Agent)               ║")
 	t.Log("║    • Desktop Agent compatible (Windows/macOS)             ║")
 	t.Log("║                                                            ║")

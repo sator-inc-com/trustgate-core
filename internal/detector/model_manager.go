@@ -27,27 +27,29 @@ type ModelFile struct {
 }
 
 // AvailableModels lists the supported models for local LLM detection.
+// Uses ONNX-converted models from gravitee-io (non-gated, quantized).
+// Original model: meta-llama/Llama-Prompt-Guard-2 (Llama 4 Community License).
 var AvailableModels = map[string]ModelInfo{
 	"prompt-guard-2-86m": {
 		Name:        "prompt-guard-2-86m",
-		Description: "Meta Prompt Guard 2 (86M) — prompt injection & jailbreak classifier. mDeBERTa-base, multilingual.",
-		Size:        "~350MB",
-		URL:         "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-86M",
+		Description: "Meta Prompt Guard 2 (86M) — binary classifier (benign/malicious). mDeBERTa-base, quantized ONNX.",
+		Size:        "~300MB",
+		URL:         "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-86M-onnx",
 		Files: []ModelFile{
-			{Name: "model.onnx", URL: "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-86M/resolve/main/onnx/model.onnx"},
-			{Name: "tokenizer.json", URL: "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-86M/resolve/main/tokenizer.json"},
-			{Name: "config.json", URL: "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-86M/resolve/main/config.json"},
+			{Name: "model.quant.onnx", URL: "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-86M-onnx/resolve/main/model.quant.onnx"},
+			{Name: "tokenizer.json", URL: "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-86M-onnx/resolve/main/tokenizer.json"},
+			{Name: "config.json", URL: "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-86M-onnx/resolve/main/config.json"},
 		},
 	},
 	"prompt-guard-2-22m": {
 		Name:        "prompt-guard-2-22m",
-		Description: "Meta Prompt Guard 2 (22M) — lightweight variant. Lower accuracy, faster inference.",
-		Size:        "~100MB",
-		URL:         "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-22M",
+		Description: "Meta Prompt Guard 2 (22M) — lightweight quantized ONNX. Better accuracy retention than 86M quantized.",
+		Size:        "~82MB",
+		URL:         "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-22M-onnx",
 		Files: []ModelFile{
-			{Name: "model.onnx", URL: "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-22M/resolve/main/onnx/model.onnx"},
-			{Name: "tokenizer.json", URL: "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-22M/resolve/main/tokenizer.json"},
-			{Name: "config.json", URL: "https://huggingface.co/meta-llama/Llama-Prompt-Guard-2-22M/resolve/main/config.json"},
+			{Name: "model.quant.onnx", URL: "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-22M-onnx/resolve/main/model.quant.onnx"},
+			{Name: "tokenizer.json", URL: "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-22M-onnx/resolve/main/tokenizer.json"},
+			{Name: "config.json", URL: "https://huggingface.co/gravitee-io/Llama-Prompt-Guard-2-22M-onnx/resolve/main/config.json"},
 		},
 	},
 }
@@ -108,8 +110,9 @@ func ModelStatus(modelName string) string {
 }
 
 // DownloadModel downloads model files from HuggingFace.
-// Supports HF_TOKEN environment variable for gated models (e.g., Meta Llama).
+// Uses gravitee-io ONNX-converted models (non-gated, no HF_TOKEN required).
 // Downloads to a temp file first, then renames for crash safety.
+// Generates a NOTICE file with Llama 4 license attribution.
 func DownloadModel(modelName string, progressFn func(file string, pct int)) error {
 	info, ok := AvailableModels[modelName]
 	if !ok {
@@ -135,7 +138,26 @@ func DownloadModel(modelName string, progressFn func(file string, pct int)) erro
 		}
 	}
 
+	// Generate NOTICE file for Llama 4 license attribution
+	writeNoticeFile(dir)
+
 	return nil
+}
+
+// writeNoticeFile creates a NOTICE file with Llama 4 Community License attribution.
+func writeNoticeFile(dir string) {
+	notice := `Llama 4 is licensed under the Llama 4 Community License,
+Copyright © Meta Platforms, Inc. All Rights Reserved.
+
+ONNX conversion provided by gravitee-io.
+Source: https://huggingface.co/gravitee-io
+
+This model is subject to the Llama 4 Community License Agreement.
+See: https://www.llama.com/llama4/license/
+
+Built with Llama.
+`
+	_ = os.WriteFile(filepath.Join(dir, "NOTICE"), []byte(notice), 0644)
 }
 
 // downloadFile downloads a single file from URL to destPath via temp file.

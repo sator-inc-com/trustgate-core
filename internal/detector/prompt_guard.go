@@ -20,11 +20,11 @@ import (
 //
 // Architecture:
 //   - Model: Prompt Guard 2 86M (mDeBERTa-base, 86M params)
-//   - Format: ONNX (exported from HuggingFace)
+//   - Format: ONNX quantized (from gravitee-io conversion)
 //   - Runtime: ONNX Runtime shared library via purego (no CGO)
 //   - Memory: ~200MB (model + runtime)
 //   - Latency: 1-5ms per inference (CPU only, no GPU needed)
-//   - Classification: benign / injection / jailbreak (3-class)
+//   - Classification: benign / malicious (2-class binary)
 type PromptGuardDetector struct {
 	mu        sync.RWMutex
 	cfg       config.LLMDetectorConfig
@@ -33,22 +33,22 @@ type PromptGuardDetector struct {
 	env       *ort.Env
 	session   *ort.Session
 	tokenizer *tokenizer.Tokenizer
-	labels    []string // ["benign", "injection", "jailbreak"]
+	labels    []string // ["benign", "malicious"]
 	maxLen    int
 }
 
 // PromptGuardResult represents the classification output.
 type PromptGuardResult struct {
-	Label      string     // "benign", "injection", "jailbreak"
+	Label      string     // "benign" or "malicious"
 	Confidence float64    // 0.0-1.0
-	Scores     [3]float64 // [benign, injection, jailbreak]
+	Scores     [2]float64 // [benign, malicious]
 }
 
 // NewPromptGuardDetector creates a new Prompt Guard 2 detector.
 func NewPromptGuardDetector(cfg config.LLMDetectorConfig) *PromptGuardDetector {
 	return &PromptGuardDetector{
 		cfg:    cfg,
-		labels: []string{"benign", "injection", "jailbreak"},
+		labels: []string{"benign", "malicious"},
 		maxLen: 512,
 	}
 }
@@ -74,11 +74,17 @@ func (d *PromptGuardDetector) LoadModel() error {
 
 	// Load from disk
 	modelDir := d.resolveModelDir()
-	modelPath := filepath.Join(modelDir, "model.onnx")
+	modelPath := filepath.Join(modelDir, "model.quant.onnx")
 	tokenizerPath := filepath.Join(modelDir, "tokenizer.json")
 
+	// Also check for non-quantized model.onnx as fallback
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
-		return fmt.Errorf("model not found at %s — run 'aigw model download %s' first", modelPath, d.modelName())
+		fallback := filepath.Join(modelDir, "model.onnx")
+		if _, err2 := os.Stat(fallback); err2 == nil {
+			modelPath = fallback
+		} else {
+			return fmt.Errorf("model not found at %s — run 'aigw model download %s' first", modelPath, d.modelName())
+		}
 	}
 	if _, err := os.Stat(tokenizerPath); os.IsNotExist(err) {
 		return fmt.Errorf("tokenizer not found at %s — run 'aigw model download %s' first", tokenizerPath, d.modelName())
@@ -105,7 +111,7 @@ func (d *PromptGuardDetector) loadFromFiles(modelPath, tokenizerPath string) err
 
 	// Create session with optimized settings
 	sessOpts := &ort.SessionOptions{
-		IntraOpNumThreads: 2, // limit threads for Desktop Agent
+		IntraOpNumThreads: 4, // balance between speed and CPU usage
 	}
 	session, err := rt.NewSession(env, modelPath, sessOpts)
 	if err != nil {
@@ -159,26 +165,13 @@ func (d *PromptGuardDetector) Classify(input string) ([]Finding, error) {
 
 	var findings []Finding
 
-	if result.Label == "injection" && result.Confidence > 0.5 {
+	if result.Label == "malicious" && result.Confidence > 0.5 {
 		findings = append(findings, Finding{
 			Detector:    "llm_injection",
-			Category:    "injection",
+			Category:    "injection", // map "malicious" to "injection" for Stage 1 compatibility
 			Severity:    classifySeverity(result.Confidence),
 			Confidence:  result.Confidence,
-			Description: fmt.Sprintf("Prompt Guard 2: injection detected (%.1f%%)", result.Confidence*100),
-			Matched:     truncate(input, 100),
-			Position:    0,
-			Length:      len(input),
-		})
-	}
-
-	if result.Label == "jailbreak" && result.Confidence > 0.5 {
-		findings = append(findings, Finding{
-			Detector:    "llm_injection",
-			Category:    "jailbreak",
-			Severity:    classifySeverity(result.Confidence),
-			Confidence:  result.Confidence,
-			Description: fmt.Sprintf("Prompt Guard 2: jailbreak detected (%.1f%%)", result.Confidence*100),
+			Description: fmt.Sprintf("Prompt Guard 2: malicious input detected (%.1f%%)", result.Confidence*100),
 			Matched:     truncate(input, 100),
 			Position:    0,
 			Length:      len(input),
@@ -220,20 +213,32 @@ func (d *PromptGuardDetector) infer(input string) (*PromptGuardResult, error) {
 	ids := encoding.GetIds()
 	mask := encoding.GetAttentionMask()
 
-	// Truncate to max length
-	if len(ids) > d.maxLen {
-		ids = ids[:d.maxLen]
-		mask = mask[:d.maxLen]
+	// Strip padding: the tokenizer may pad to max_length (e.g., 512),
+	// but ONNX inference cost scales with sequence length.
+	// Only keep tokens where attention_mask == 1.
+	realLen := 0
+	for _, m := range mask {
+		if m == 1 {
+			realLen++
+		}
+	}
+	if realLen == 0 {
+		realLen = len(ids) // fallback: no mask info, use all tokens
 	}
 
-	seqLen := int64(len(ids))
+	// Truncate to max length
+	if realLen > d.maxLen {
+		realLen = d.maxLen
+	}
 
-	// 2. Create input tensors (int64)
+	seqLen := int64(realLen)
+
+	// 2. Create input tensors (int64) — unpadded
 	inputIDs := make([]int64, seqLen)
 	attentionMask := make([]int64, seqLen)
-	for i := range ids {
+	for i := 0; i < realLen; i++ {
 		inputIDs[i] = int64(ids[i])
-		attentionMask[i] = int64(mask[i])
+		attentionMask[i] = 1 // all real tokens have mask=1
 	}
 
 	inputShape := []int64{1, seqLen}
@@ -272,8 +277,8 @@ func (d *PromptGuardDetector) infer(input string) (*PromptGuardResult, error) {
 		break // only need first output
 	}
 
-	if len(logits) < 3 {
-		return nil, fmt.Errorf("unexpected output size: %d (expected 3)", len(logits))
+	if len(logits) < 2 {
+		return nil, fmt.Errorf("unexpected output size: %d (expected 2)", len(logits))
 	}
 
 	// 5. Softmax → probabilities
@@ -296,12 +301,12 @@ func (d *PromptGuardDetector) infer(input string) (*PromptGuardResult, error) {
 	}, nil
 }
 
-// softmax converts logits to probabilities.
-func softmax(logits []float32) [3]float64 {
-	var result [3]float64
+// softmax converts logits to probabilities (2-class: benign/malicious).
+func softmax(logits []float32) [2]float64 {
+	var result [2]float64
 	n := len(logits)
-	if n > 3 {
-		n = 3
+	if n > 2 {
+		n = 2
 	}
 
 	maxVal := float64(logits[0])
@@ -333,7 +338,7 @@ func (d *PromptGuardDetector) resolveModelDir() string {
 func (d *PromptGuardDetector) modelName() string {
 	model := d.cfg.Model
 	if model == "" {
-		model = "prompt-guard-2-86m"
+		model = "prompt-guard-2-22m"
 	}
 	return model
 }

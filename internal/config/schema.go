@@ -137,12 +137,12 @@ type DetectorConfig struct {
 }
 
 // LLMDetectorConfig configures the local LLM-based detector (Stage 2).
-// Uses Prompt Guard 2 (86M) for prompt injection/jailbreak classification.
+// Uses Prompt Guard 2 (86M) for binary classification (benign/malicious).
 // Small enough to run on Desktop Agent (200MB RAM, no GPU required).
 type LLMDetectorConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	// Model selection
-	Model   string `yaml:"model"`    // "prompt-guard-2-86m" (default) | "prompt-guard-2-22m"
+	Model   string `yaml:"model"`    // "prompt-guard-2-22m" (default) | "prompt-guard-2-86m"
 	// Path to model files (auto-downloaded if not present)
 	ModelDir string `yaml:"model_dir"` // default: ~/.trustgate/models/
 	// Gray-zone escalation threshold: findings with confidence below this

@@ -7,12 +7,11 @@ import "github.com/trustgate/trustgate/internal/config"
 // PromptGuardDetector is a stub when built without LLM support.
 type PromptGuardDetector struct{}
 
-// PromptGuardResult is a stub.
+// PromptGuardResult is a stub (must match prompt_guard.go).
 type PromptGuardResult struct {
 	Label      string
-	Benign     float64
-	Injection  float64
-	Jailbreak  float64
+	Confidence float64
+	Scores     [2]float64
 }
 
 func NewPromptGuardDetector(_ config.LLMDetectorConfig) *PromptGuardDetector {
