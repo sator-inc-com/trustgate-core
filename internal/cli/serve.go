@@ -102,6 +102,11 @@ func newServeCmd() *cobra.Command {
 				fmt.Printf("  Sync:       managed mode (%s)\n", cfg.Sync.ServerURL)
 			}
 
+			// Watch config file for hot reload
+			if cfgFile != "" {
+				srv.WatchConfig(cfgFile)
+			}
+
 			return srv.Run()
 		},
 	}
