@@ -53,6 +53,15 @@ if [ "$1" = "--uninstall" ]; then
     rm -f "$INSTALL_DIR/aigw" "$INSTALL_DIR/aigw-tray"
     echo "  Binaries removed"
 
+    # Restore Chrome original binary
+    CHROME_APP="/Applications/Google Chrome.app"
+    CHROME_BIN="$CHROME_APP/Contents/MacOS/Google Chrome"
+    CHROME_REAL="$CHROME_APP/Contents/MacOS/Google Chrome.real"
+    if [ -f "$CHROME_REAL" ]; then
+        sudo mv "$CHROME_REAL" "$CHROME_BIN"
+        echo "  Chrome original binary restored"
+    fi
+
     echo ""
     echo -e "${YELLOW}Note: Config and data preserved at:${NC}"
     echo "  $CONFIG_DIR"
@@ -193,6 +202,29 @@ if [ -n "$TRAY_BIN" ]; then
     cp "$SCRIPT_DIR/com.trustgate.tray.plist" "$LAUNCH_AGENTS/com.trustgate.tray.plist"
     launchctl load "$LAUNCH_AGENTS/com.trustgate.tray.plist" 2>/dev/null || true
     echo "  Tray auto-launch registered (com.trustgate.tray)"
+fi
+
+# Configure Chrome to suppress debugger banner
+CHROME_APP="/Applications/Google Chrome.app"
+CHROME_BIN="$CHROME_APP/Contents/MacOS/Google Chrome"
+CHROME_REAL="$CHROME_APP/Contents/MacOS/Google Chrome.real"
+
+if [ -d "$CHROME_APP" ]; then
+    if [ -f "$CHROME_REAL" ]; then
+        echo -e "${GREEN}Chrome debugger banner suppression already configured.${NC}"
+    elif [ -f "$CHROME_BIN" ] && ! head -c 4 "$CHROME_BIN" | grep -q '#!'; then
+        # Binary exists and is not already a wrapper script
+        echo "Configuring Chrome to suppress debugger banner..."
+        sudo mv "$CHROME_BIN" "$CHROME_REAL"
+        sudo tee "$CHROME_BIN" > /dev/null << 'WRAPPER'
+#!/bin/bash
+exec "$(dirname "$0")/Google Chrome.real" --silent-debugger-extension-api "$@"
+WRAPPER
+        sudo chmod +x "$CHROME_BIN"
+        echo -e "${GREEN}  Chrome debugger banner will be suppressed.${NC}"
+    fi
+else
+    echo -e "${YELLOW}Chrome not found at $CHROME_APP — skipping banner config.${NC}"
 fi
 
 # Start service
